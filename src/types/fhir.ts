@@ -1,10 +1,14 @@
 // FHIR相关类型定义
 
 // FHIR资源基本接口
-export interface FHIRResource {
+export interface FhirResource {
   resourceType: string;
   id?: string;
-  meta?: FHIRMeta;
+  meta?: {
+    versionId?: string;
+    lastUpdated?: string;
+    profile?: string[];
+  };
   [key: string]: any;
 }
 
@@ -67,12 +71,29 @@ export interface FHIRPeriod {
 }
 
 // FHIR Bundle类型
-export interface FHIRBundle extends FHIRResource {
+export interface FhirBundle {
   resourceType: 'Bundle';
   type: 'collection' | 'document' | 'message' | 'transaction' | 'transaction-response' | 'batch' | 'batch-response' | 'history' | 'searchset';
-  total?: number;
-  link?: FHIRBundleLink[];
-  entry?: FHIRBundleEntry[];
+  id?: string;
+  meta?: {
+    versionId?: string;
+    lastUpdated?: string;
+    profile?: string[];
+  };
+  entry?: {
+    fullUrl?: string;
+    resource: FhirResource;
+    request?: {
+      method: string;
+      url: string;
+    };
+    response?: {
+      status: string;
+      location?: string;
+      etag?: string;
+      lastModified?: string;
+    };
+  }[];
 }
 
 // FHIR Bundle链接
@@ -84,7 +105,7 @@ export interface FHIRBundleLink {
 // FHIR Bundle条目
 export interface FHIRBundleEntry {
   fullUrl?: string;
-  resource?: FHIRResource;
+  resource?: FhirResource;
   search?: {
     mode?: string;
     score?: number;
@@ -102,12 +123,12 @@ export interface FHIRBundleEntry {
     location?: string;
     etag?: string;
     lastModified?: string;
-    outcome?: FHIRResource;
+    outcome?: FhirResource;
   };
 }
 
 // FHIR Patient资源
-export interface FHIRPatient extends FHIRResource {
+export interface FHIRPatient extends FhirResource {
   resourceType: 'Patient';
   identifier?: FHIRIdentifier[];
   active?: boolean;
@@ -192,4 +213,50 @@ export interface FHIRPatientContact {
   period?: FHIRPeriod;
 }
 
-// 其他FHIR资源类型可以根据需要添加 
+// 其他FHIR资源类型可以根据需要添加
+
+export interface FhirResourceTypeMap {
+  [resourceType: string]: {
+    properties: {
+      [propertyName: string]: {
+        type: string;
+        description?: string;
+        path?: string;
+      };
+    };
+  };
+}
+
+export interface FhirPathConfig {
+  path: string;
+  resourceType: string;
+  propertyType: string;
+  description?: string;
+}
+
+export interface FhirResourceProfile {
+  resourceType: string;
+  properties: Array<{
+    name: string;
+    type: string;
+    path: string;
+    description?: string;
+  }>;
+}
+
+export const commonFhirResources: string[] = [
+  'Patient', 
+  'Practitioner', 
+  'Organization', 
+  'Encounter', 
+  'Observation', 
+  'Condition', 
+  'MedicationRequest',
+  'Procedure', 
+  'DiagnosticReport', 
+  'CarePlan', 
+  'Claim', 
+  'Coverage',
+  'DocumentReference',
+  'Bundle'
+]; 

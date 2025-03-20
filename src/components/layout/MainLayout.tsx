@@ -2,8 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
+import { Layout } from 'antd';
+import Sidebar from './Sidebar';
 
-const MainLayout: React.FC = () => {
+const { Content } = Layout;
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
@@ -33,16 +41,24 @@ const MainLayout: React.FC = () => {
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
+    // 在这里添加切换暗色模式的逻辑
+    if (!isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header onToggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sidebar />
+      <Layout>
+        <Header onToggleDarkMode={toggleDarkMode} isDarkMode={isDarkMode} />
+        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff' }}>
+          {children}
+        </Content>
+      </Layout>
+    </Layout>
   );
 };
 

@@ -1,0 +1,225 @@
+[
+    {
+        "datadomain": {
+            "name": "pre_review_domain",
+            "id": "pre-review-domain",
+            "description": "事前审查域",
+            "logicalDtos": [
+                {
+                    "name": "hospital_info",
+                    "id": "hospital-info",
+                    "description": "院所信息",
+                    "meta": {
+                        "fields": [
+                            {
+                                "name": "emergency_report_date",
+                                "type": "string",
+                                "description": "紧急报备日期",
+                                "fhir_mapping": {
+                                    "path": "Claim.timestamp",
+                                    "type": "date"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "emergency Report Date",
+                                    "field_path": "$.emergencyReportDate"
+                                }
+                            },
+                            {
+                                "name": "accept_number",
+                                "type": "integer",
+                                "description": "受理编号",
+                                "fhir_mapping": {
+                                    "path": "Claim.identifier.where(system='http://hl7.org/fhir/sid/us-npi').value",
+                                    "type": "integer"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "accept Number",
+                                    "field_path": "$.acceptNumber"
+                                }
+                            },
+                            {
+                                "name": "organization_code",
+                                "type": "string",
+                                "description": "机构代码",
+                                "fhir_mapping": {
+                                    "path": "Claim.provider.reference.resolve(Organization).identifier.where(system='http://hl7.org/fhir/sid/us-npi').value",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "organization Code",
+                                    "field_path": "$.organizationCode"
+                                }
+                            },
+                            {
+                                "name": "declare_type",
+                                "type": "string",
+                                "description": "申报类别",
+                                "fhir_mapping": {
+                                    "path": "Claim.subType.coding.where(system='http://hl7.org/fhir/sid/us-npi').code",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "declare Type",
+                                    "field_path": "$.declareType"
+                                }
+                            },
+                            {
+                                "name": "declare_date",
+                                "type": "string",
+                                "description": "就医科别",
+                                "fhir_mapping": {
+                                    "path": "Claim.encounter.reference.resolve(Encounter).encounterType.coding.where(system='http://hl7.org/fhir/sid/us-npi').code",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "declare Type",
+                                    "field_path": "$.declareType"
+                                }
+                            },
+                            {
+                                "name": "apply_doctor_id_number",
+                                "type": "string",
+                                "description": "申请医师身份证号",
+                                "fhir_mapping": {
+                                    "path": "Claim.enterer.reference.resolve(Practitioner).identifier.where(system='http://hl7.org/fhir/sid/us-npi').value",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "apply Doctor Id Number",
+                                    "field_path": "$.applyDoctorIdNumber"
+                                }
+                            },
+                            {
+                                "name": "apply_date",
+                                "type": "string",
+                                "description": "申请日期",
+                                "fhir_mapping": {
+                                    "path": "Claim.created.date",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "apply Date",
+                                    "field_path": "$.applyDate"
+                                }
+                            },
+                            {
+                                "name": "apply_type",
+                                "type": "string",
+                                "description": "申请类别",
+                                "fhir_mapping": {
+                                    "path": "Claim.priority.coding.where(system='http://hl7.org/fhir/sid/us-npi').code",
+                                    "type": "string"
+                                },
+                                "third_party_mapping": {
+                                    "third_party_dto": "hospital_info",
+                                    "field_desc": "apply Type",
+                                    "field_path": "$.applyType"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ],
+            "thirdPartyDtos": [
+                {
+                    "name": "hospital_info",
+                    "id": "hospital-info",
+                    "description": "院所信息",
+                    "meta": {
+                        "fields": [
+                            {
+                                "desc": "emergency Report Date",
+                                "name": "emergencyReportDate",
+                                "type": "string",
+                                "description": "紧急报备日期"
+                            },
+                            {
+                                "name": "acceptNumber",
+                                "desc": "accept Number",
+                                "type": "string",
+                                "description": "受理编号"
+                            },
+                            {   
+                                "name": "organizationCode",
+                                "desc": "organization Code",
+                                "type": "string",
+                                "description": "机构代码"
+                            },
+                            {
+                                "name": "declareType",
+                                "desc": "declare Type",
+                                "type": "string",
+                                "description": "申报类别"
+                            },
+                            {
+                                "name": "applyDoctorIdNumber",
+                                "desc": "apply Doctor Id Number",
+                                "type": "string",
+                                "description": "申请医师身份证号"
+                            },
+                            {
+                                "name": "applyDate",    
+                                "desc": "apply Date",
+                                "type": "string",
+                                "description": "申请日期"
+                            },
+                            {
+                                "name": "applyType",
+                                "desc": "apply Type",   
+                                "type": "string",
+                                "description": "申请类别"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "patientInfo",
+                    "desc": "patient Info",
+                    "type": "object",
+                    "description": "患者信息",
+                    "meta": {
+                        "fields": [
+                            {
+                                "name": "patientName",
+                                "desc": "patient Name",
+                                "type": "string",
+                                "description": "患者姓名"
+                            },
+                            {
+                                "name": "patientIdNumber",
+                                "desc": "patient Id Number",
+                                "type": "string",
+                                "description": "患者身份证号"
+                            },
+                            {
+                                "name": "patientGender",
+                                "desc": "patient Gender",
+                                "type": "string",
+                                "description": "患者性别"
+                            }, 
+                            {
+                                "name": "patientWeight",
+                                "desc": "patient Weight",
+                                "type": "string",
+                                "description": "体重"
+                            },
+                            {
+                                "name": "patientHeight",
+                                "desc": "patient Height",
+                                "type": "string",
+                                "description": "身高"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+]

@@ -1,16 +1,6 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
-import HomePage from './pages/HomePage';
-import MetadataPage from './pages/MetadataPage';
-import MappingPage from './pages/MappingPage';
-import VisualizationPage from './pages/VisualizationPage';
-import Header from './components/layout/Header';
-import { DataDomain } from './types/metadata';
+import { DataDomain } from '../types/metadata';
 
-// 示例数据
-const sampleDataDomains: DataDomain[] = [
+export const sampleDataDomains: DataDomain[] = [
   {
     id: 'patient',
     name: '患者信息',
@@ -129,28 +119,4 @@ const sampleDataDomains: DataDomain[] = [
       }
     ]
   }
-];
-
-const App: React.FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  return (
-    <ConfigProvider locale={zhCN}>
-      <Router>
-        <div style={{ minHeight: '100vh', background: isDarkMode ? '#141414' : '#f0f2f5' }}>
-          <Header onToggleDarkMode={() => setIsDarkMode(!isDarkMode)} isDarkMode={isDarkMode} />
-          <div style={{ padding: '24px' }}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/metadata" element={<MetadataPage />} />
-              <Route path="/mapping" element={<MappingPage dataDomains={sampleDataDomains} />} />
-              <Route path="/visualization" element={<VisualizationPage dataDomains={sampleDataDomains} />} />
-            </Routes>
-          </div>
-        </div>
-      </Router>
-    </ConfigProvider>
-  );
-};
-
-export default App;
+]; 

@@ -1,376 +1,531 @@
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
+import React, { useState } from 'react';
+import { Card, Tabs } from 'antd';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { DataDomain, LogicDto, ThirdPartyDto, LogicDtoField } from '../../types/metadata';
 import { 
-  FieldMapping, 
-  LogicModelMetadata, 
-  MappingConfig, 
-  TransformationType 
-} from '../../types/models';
+  LogicToFhirMapping, 
+  ThirdPartyToLogicMapping,
+  FhirToLogicMapping,
+  LogicToThirdPartyMapping,
+  FieldMapping
+} from '../../types/mapping';
+import { commonFhirResources } from '../../types/fhir';
 
-// 定义映射表单验证模式
-const mappingConfigSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, '映射名称不能为空'),
-  description: z.string().optional(),
-  sourceModelId: z.string().min(1, '请选择源模型'),
-  targetModelId: z.string().min(1, '请选择目标模型'),
-  domain: z.string().min(1, '数据领域不能为空'),
-});
-
-type MappingFormData = z.infer<typeof mappingConfigSchema>;
+const { TabPane } = Tabs;
 
 interface MappingEditorProps {
-  availableModels: LogicModelMetadata[];
-  initialData?: MappingConfig;
-  onSave: (data: MappingConfig) => void;
+  dataDomains?: DataDomain[];
+  onSave?: (mappingConfig: any) => void;
 }
 
-const MappingEditor: React.FC<MappingEditorProps> = ({ 
-  availableModels, 
-  initialData, 
-  onSave 
-}) => {
-  // 源模型和目标模型
-  const [sourceModel, setSourceModel] = useState<LogicModelMetadata | null>(null);
-  const [targetModel, setTargetModel] = useState<LogicModelMetadata | null>(null);
+const MappingEditor: React.FC<MappingEditorProps> = ({ dataDomains = [], onSave }) => {
+  const [activeTab, setActiveTab] = useState('logic-to-fhir');
 
-  // 已映射字段列表
-  const [mappings, setMappings] = useState<FieldMapping[]>(initialData?.mappings || []);
-
-  // 拖拽状态
-  const [draggingField, setDraggingField] = useState<{id: string, isSource: boolean} | null>(null);
-  
-  const { control, handleSubmit, formState: { errors }, watch } = useForm<MappingFormData>({
-    resolver: zodResolver(mappingConfigSchema),
-    defaultValues: initialData || {
-      name: '',
-      description: '',
-      sourceModelId: '',
-      targetModelId: '',
-      domain: '',
-    },
-  });
-
-  // 监听源模型和目标模型的选择变化
-  const sourceModelId = watch('sourceModelId');
-  const targetModelId = watch('targetModelId');
-
-  useEffect(() => {
-    if (sourceModelId) {
-      const model = availableModels.find(m => m.id === sourceModelId);
-      setSourceModel(model || null);
-    } else {
-      setSourceModel(null);
-    }
-  }, [sourceModelId, availableModels]);
-
-  useEffect(() => {
-    if (targetModelId) {
-      const model = availableModels.find(m => m.id === targetModelId);
-      setTargetModel(model || null);
-    } else {
-      setTargetModel(null);
-    }
-  }, [targetModelId, availableModels]);
-
-  // 处理字段拖拽开始
-  const handleDragStart = (fieldId: string, isSource: boolean) => {
-    setDraggingField({ id: fieldId, isSource });
-  };
-
-  // 处理字段拖放
-  const handleDrop = (fieldId: string, isSource: boolean) => {
-    if (draggingField && draggingField.isSource !== isSource) {
-      // 确保源字段到目标字段的映射
-      const sourceFieldId = draggingField.isSource ? draggingField.id : fieldId;
-      const targetFieldId = draggingField.isSource ? fieldId : draggingField.id;
-      
-      // 检查是否已存在相同映射
-      const existingMapping = mappings.find(
-        m => m.sourceFieldId === sourceFieldId && m.targetFieldId === targetFieldId
-      );
-      
-      if (!existingMapping) {
-        // 添加新映射
-        const newMapping: FieldMapping = {
-          sourceFieldId,
-          targetFieldId,
-          transformations: [
-            {
-              type: TransformationType.DIRECT, // 默认为直接映射
-              params: {}
-            }
-          ]
-        };
-        
-        setMappings([...mappings, newMapping]);
-      }
-    }
-    
-    setDraggingField(null);
-  };
-
-  // 删除映射
-  const removeMapping = (sourceFieldId: string, targetFieldId: string) => {
-    setMappings(mappings.filter(
-      m => !(m.sourceFieldId === sourceFieldId && m.targetFieldId === targetFieldId)
-    ));
-  };
-
-  // 获取字段完整路径
-  const getFieldPath = (fieldId: string, isSource: boolean) => {
-    const model = isSource ? sourceModel : targetModel;
-    if (!model) return '';
-    
-    const findFieldPath = (fields: any[], id: string): string => {
-      for (const field of fields) {
-        if (field.id === id) {
-          return field.path;
-        }
-        if (field.children && field.children.length > 0) {
-          const path = findFieldPath(field.children, id);
-          if (path) return path;
-        }
-      }
-      return '';
-    };
-    
-    return findFieldPath(model.fields, fieldId);
-  };
-
-  // 保存映射配置
-  const onSubmit = (data: MappingFormData) => {
-    if (mappings.length === 0) {
-      alert('请至少添加一个字段映射');
-      return;
-    }
-    
-    const mappingConfig: MappingConfig = {
-      ...data,
-      id: data.id || `mapping_${Date.now()}`,
-      mappings
-    };
-    
-    onSave(mappingConfig);
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
   };
 
   return (
-    <div className="card">
-      <h2 className="text-2xl font-semibold mb-6">映射配置编辑器</h2>
-      
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              映射名称 <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="name"
-              control={control}
-              render={({ field }) => (
-                <input {...field} className="input" placeholder="输入映射名称" />
-              )}
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              数据领域 <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="domain"
-              control={control}
-              render={({ field }) => (
-                <input {...field} className="input" placeholder="如 患者信息、检验报告等" />
-              )}
-            />
-            {errors.domain && (
-              <p className="mt-1 text-sm text-red-600">{errors.domain.message}</p>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              源模型 <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="sourceModelId"
-              control={control}
-              render={({ field }) => (
-                <select {...field} className="input">
-                  <option value="">请选择源模型</option>
-                  {availableModels.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name} (v{model.version})
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-            {errors.sourceModelId && (
-              <p className="mt-1 text-sm text-red-600">{errors.sourceModelId.message}</p>
-            )}
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              目标模型 <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="targetModelId"
-              control={control}
-              render={({ field }) => (
-                <select {...field} className="input">
-                  <option value="">请选择目标模型</option>
-                  {availableModels.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name} (v{model.version})
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-            {errors.targetModelId && (
-              <p className="mt-1 text-sm text-red-600">{errors.targetModelId.message}</p>
-            )}
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              描述
-            </label>
-            <Controller
-              name="description"
-              control={control}
-              render={({ field }) => (
-                <textarea
-                  {...field}
-                  className="input h-24"
-                  placeholder="映射配置描述..."
-                />
-              )}
-            />
-          </div>
-        </div>
-        
-        {/* 映射区域 */}
-        {sourceModel && targetModel && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">字段映射</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              通过拖拽字段来创建映射关系。从源模型拖拽到目标模型，或从目标模型拖拽到源模型。
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* 源模型字段列表 */}
-              <div>
-                <h4 className="text-lg font-medium mb-2">源模型: {sourceModel.name}</h4>
-                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 h-96 overflow-y-auto">
-                  {sourceModel.fields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="bg-white dark:bg-gray-700 p-2 mb-2 rounded border border-gray-200 dark:border-gray-600 cursor-move"
-                      draggable
-                      onDragStart={() => handleDragStart(field.id, true)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => handleDrop(field.id, true)}
-                    >
-                      <div className="font-medium">{field.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{field.path}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* 目标模型字段列表 */}
-              <div>
-                <h4 className="text-lg font-medium mb-2">目标模型: {targetModel.name}</h4>
-                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 h-96 overflow-y-auto">
-                  {targetModel.fields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="bg-white dark:bg-gray-700 p-2 mb-2 rounded border border-gray-200 dark:border-gray-600 cursor-move"
-                      draggable
-                      onDragStart={() => handleDragStart(field.id, false)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => handleDrop(field.id, false)}
-                    >
-                      <div className="font-medium">{field.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{field.path}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* 当前映射列表 */}
-        {mappings.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">已创建的映射</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      源字段
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      目标字段
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      转换
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                  {mappings.map((mapping, index) => (
-                    <tr key={`${mapping.sourceFieldId}-${mapping.targetFieldId}`}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {getFieldPath(mapping.sourceFieldId, true)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {getFieldPath(mapping.targetFieldId, false)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {mapping.transformations && mapping.transformations.length > 0 
-                          ? mapping.transformations.map(t => t.type).join(', ') 
-                          : '直接映射'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          type="button"
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => removeMapping(mapping.sourceFieldId, mapping.targetFieldId)}
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex justify-end">
-          <button type="submit" className="btn btn-primary">
-            保存映射配置
-          </button>
-        </div>
-      </form>
-    </div>
+    <Card title="映射配置">
+      <Tabs activeKey={activeTab} onChange={handleTabChange}>
+        <TabPane tab="逻辑模型到FHIR映射" key="logic-to-fhir">
+          <LogicToFhirMappingEditor dataDomains={dataDomains} />
+        </TabPane>
+        <TabPane tab="第三方数据到逻辑模型映射" key="third-party-to-logic">
+          <ThirdPartyToLogicMappingEditor dataDomains={dataDomains} />
+        </TabPane>
+      </Tabs>
+    </Card>
   );
 };
 
-export default MappingEditor; 
+// 字段映射验证Schema
+const fieldMappingSchema = z.object({
+  sourcePath: z.string().min(1, '源字段不能为空'),
+  targetPath: z.string().min(1, '目标字段不能为空'),
+  transform: z.string().optional(),
+  condition: z.string().optional()
+});
+
+// LogicToFhir映射验证Schema
+const logicToFhirMappingSchema = z.object({
+  dataDomainId: z.string().min(1, '数据域ID不能为空'),
+  logicDtoId: z.string().min(1, '逻辑DTO ID不能为空'),
+  fhirResourceType: z.string().min(1, 'FHIR资源类型不能为空'),
+  fieldMappings: z.array(fieldMappingSchema)
+});
+
+// ThirdPartyToLogic映射验证Schema
+const thirdPartyToLogicMappingSchema = z.object({
+  dataDomainId: z.string().min(1, '数据域ID不能为空'),
+  thirdPartyDtoId: z.string().min(1, '第三方DTO ID不能为空'),
+  logicDtoId: z.string().min(1, '逻辑DTO ID不能为空'),
+  fieldMappings: z.array(fieldMappingSchema)
+});
+
+interface LogicToFhirMappingEditorProps {
+  dataDomains: DataDomain[];
+  initialMapping?: any;
+  onSave?: (mapping: any) => void;
+}
+
+const LogicToFhirMappingEditor: React.FC<LogicToFhirMappingEditorProps> = ({ 
+  dataDomains, 
+  initialMapping,
+  onSave 
+}) => {
+  const defaultValues: LogicToFhirMapping = initialMapping || {
+    dataDomainId: '',
+    logicDtoId: '',
+    fhirResourceType: '',
+    fieldMappings: []
+  };
+
+  const { control, handleSubmit, formState: { errors }, watch } = useForm<LogicToFhirMapping>({
+    resolver: zodResolver(logicToFhirMappingSchema),
+    defaultValues
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'fieldMappings'
+  });
+
+  const logicDtoId = watch('logicDtoId');
+  const selectedLogicDto = dataDomains.find(domain => 
+    domain.logicalDtos.some(dto => dto.id === logicDtoId)
+  )?.logicalDtos.find(dto => dto.id === logicDtoId);
+
+  const onSubmit = (data: LogicToFhirMapping) => {
+    onSave && onSave(data);
+  };
+
+  const logicDtoFields = selectedLogicDto?.meta.fields.map((logicField: LogicDtoField) => (
+    <option key={logicField.name} value={logicField.name}>
+      {`${logicField.name} (${logicField.type})`}
+    </option>
+  )) || [];
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            逻辑DTO
+          </label>
+          <Controller
+            name="logicDtoId"
+            control={control}
+            render={({ field }) => (
+              <select
+                {...field}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">请选择逻辑DTO</option>
+                {dataDomains.map(domain => (
+                  domain.logicalDtos.map(dto => (
+                    <option key={dto.id} value={dto.id}>
+                      {`${domain.name} - ${dto.name}`}
+                    </option>
+                  ))
+                ))}
+              </select>
+            )}
+          />
+          {errors.logicDtoId && <p className="mt-1 text-sm text-red-600">{errors.logicDtoId.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            FHIR资源类型
+          </label>
+          <Controller
+            name="fhirResourceType"
+            control={control}
+            render={({ field }) => (
+              <select
+                {...field}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">请选择FHIR资源类型</option>
+                {commonFhirResources.map(resourceType => (
+                  <option key={resourceType} value={resourceType}>{resourceType}</option>
+                ))}
+              </select>
+            )}
+          />
+          {errors.fhirResourceType && <p className="mt-1 text-sm text-red-600">{errors.fhirResourceType.message}</p>}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium leading-6 text-gray-900">字段映射</h3>
+          <button
+            type="button"
+            onClick={() => append({ sourcePath: '', targetPath: '', transform: '', condition: '' })}
+            className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700"
+            disabled={!selectedLogicDto}
+          >
+            添加字段映射
+          </button>
+        </div>
+
+        {selectedLogicDto ? (
+          <div className="space-y-4">
+            {fields.map((field, index) => (
+              <div key={field.id} className="border p-4 rounded-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-md font-medium text-gray-900">映射 #{index + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    移除
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      逻辑字段（源）
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.sourcePath`}
+                      control={control}
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                          <option value="">请选择逻辑字段</option>
+                          {logicDtoFields}
+                        </select>
+                      )}
+                    />
+                    {errors.fieldMappings?.[index]?.sourcePath && (
+                      <p className="mt-1 text-sm text-red-600">{errors.fieldMappings[index]?.sourcePath?.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      FHIR路径（目标）
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.targetPath`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          type="text"
+                          placeholder="如 Patient.name[0].given[0]"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      )}
+                    />
+                    {errors.fieldMappings?.[index]?.targetPath && (
+                      <p className="mt-1 text-sm text-red-600">{errors.fieldMappings[index]?.targetPath?.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      转换表达式
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.transform`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          type="text"
+                          placeholder="如 value => value.toUpperCase()"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      条件表达式
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.condition`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          type="text"
+                          placeholder="如 data => data.hasName"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-500">请先选择逻辑DTO</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          type="submit"
+          className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700"
+        >
+          保存
+        </button>
+      </div>
+    </form>
+  );
+};
+
+interface ThirdPartyToLogicMappingEditorProps {
+  dataDomains: DataDomain[];
+  initialMapping?: any;
+  onSave?: (mapping: any) => void;
+}
+
+const ThirdPartyToLogicMappingEditor: React.FC<ThirdPartyToLogicMappingEditorProps> = ({ 
+  dataDomains, 
+  initialMapping,
+  onSave 
+}) => {
+  const defaultValues: ThirdPartyToLogicMapping = initialMapping || {
+    dataDomainId: '',
+    thirdPartyDtoId: '',
+    logicDtoId: '',
+    fieldMappings: []
+  };
+
+  const { control, handleSubmit, formState: { errors }, watch } = useForm<ThirdPartyToLogicMapping>({
+    resolver: zodResolver(thirdPartyToLogicMappingSchema),
+    defaultValues
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'fieldMappings'
+  });
+
+  const thirdPartyDtoId = watch('thirdPartyDtoId');
+  const selectedThirdPartyDto = dataDomains.find(domain => 
+    domain.thirdPartyDtos.some(dto => dto.id === thirdPartyDtoId)
+  )?.thirdPartyDtos.find(dto => dto.id === thirdPartyDtoId);
+
+  const logicDtoId = watch('logicDtoId');
+  const selectedLogicDto = dataDomains.find(domain => 
+    domain.logicalDtos.some(dto => dto.id === logicDtoId)
+  )?.logicalDtos.find(dto => dto.id === logicDtoId);
+
+  const onSubmit = (data: ThirdPartyToLogicMapping) => {
+    onSave && onSave(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            第三方DTO
+          </label>
+          <Controller
+            name="thirdPartyDtoId"
+            control={control}
+            render={({ field }) => (
+              <select
+                {...field}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">请选择第三方DTO</option>
+                {dataDomains.map(domain => (
+                  domain.thirdPartyDtos.map(dto => (
+                    <option key={dto.id} value={dto.id}>
+                      {`${domain.name} - ${dto.name}`}
+                    </option>
+                  ))
+                ))}
+              </select>
+            )}
+          />
+          {errors.thirdPartyDtoId && <p className="mt-1 text-sm text-red-600">{errors.thirdPartyDtoId.message}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            逻辑DTO
+          </label>
+          <Controller
+            name="logicDtoId"
+            control={control}
+            render={({ field }) => (
+              <select
+                {...field}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="">请选择逻辑DTO</option>
+                {dataDomains.map(domain => (
+                  domain.logicalDtos.map(dto => (
+                    <option key={dto.id} value={dto.id}>
+                      {`${domain.name} - ${dto.name}`}
+                    </option>
+                  ))
+                ))}
+              </select>
+            )}
+          />
+          {errors.logicDtoId && <p className="mt-1 text-sm text-red-600">{errors.logicDtoId.message}</p>}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium leading-6 text-gray-900">字段映射</h3>
+          <button
+            type="button"
+            onClick={() => append({ sourcePath: '', targetPath: '', transform: '', condition: '' })}
+            className="px-3 py-1 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700"
+            disabled={!selectedThirdPartyDto || !selectedLogicDto}
+          >
+            添加字段映射
+          </button>
+        </div>
+
+        {selectedThirdPartyDto && selectedLogicDto ? (
+          <div className="space-y-4">
+            {fields.map((field, index) => (
+              <div key={field.id} className="border p-4 rounded-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-md font-medium text-gray-900">映射 #{index + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    移除
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      第三方字段（源）
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.sourcePath`}
+                      control={control}
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                          <option value="">请选择第三方字段</option>
+                          {selectedThirdPartyDto.meta.fields.map((thirdPartyField) => (
+                            <option key={thirdPartyField.name} value={thirdPartyField.name}>
+                              {`${thirdPartyField.name} (${thirdPartyField.type})`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    />
+                    {errors.fieldMappings?.[index]?.sourcePath && (
+                      <p className="mt-1 text-sm text-red-600">{errors.fieldMappings[index]?.sourcePath?.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      逻辑字段（目标）
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.targetPath`}
+                      control={control}
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                          <option value="">请选择逻辑字段</option>
+                          {selectedLogicDto.meta.fields.map((logicField) => (
+                            <option key={logicField.name} value={logicField.name}>
+                              {`${logicField.name} (${logicField.type})`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    />
+                    {errors.fieldMappings?.[index]?.targetPath && (
+                      <p className="mt-1 text-sm text-red-600">{errors.fieldMappings[index]?.targetPath?.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      转换表达式
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.transform`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          type="text"
+                          placeholder="如 value => value.toUpperCase()"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      条件表达式
+                    </label>
+                    <Controller
+                      name={`fieldMappings.${index}.condition`}
+                      control={control}
+                      render={({ field }) => (
+                        <input
+                          {...field}
+                          type="text"
+                          placeholder="如 data => data.hasName"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-500">请先选择第三方DTO和逻辑DTO</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          type="submit"
+          className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700"
+        >
+          保存
+        </button>
+      </div>
+    </form>
+  );
+};
+
+export { LogicToFhirMappingEditor, ThirdPartyToLogicMappingEditor };
+export default MappingEditor;
