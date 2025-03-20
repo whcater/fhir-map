@@ -26,10 +26,6 @@ const VisualizationPage: React.FC<VisualizationPageProps> = ({ dataDomains }) =>
     setSelectedNode(node);
   };
 
-  const handleError = (error: Error) => {
-    setError(error.message);
-  };
-
   return (
     <Card title="数据模型可视化">
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -45,7 +41,7 @@ const VisualizationPage: React.FC<VisualizationPageProps> = ({ dataDomains }) =>
               <Select
                 defaultValue="er"
                 style={{ width: 200 }}
-                onChange={(value) => {
+                onChange={() => {
                   setActiveTab('mermaid');
                   setError(null);
                 }}

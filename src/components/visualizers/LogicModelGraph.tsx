@@ -6,14 +6,12 @@ import ReactFlow, {
   Panel,
   useNodesState,
   useEdgesState,
-  Node,
-  Edge,
   NodeTypes,
   EdgeTypes
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-import { LogicDto, DataDomain } from '../../types/metadata';
+import { DataDomain } from '../../types/metadata';
 import { LogicToFhirMapping, ThirdPartyToLogicMapping } from '../../types/mapping';
 import { createFullDomainVisual } from '../../utils/visualizationUtils';
 
@@ -46,7 +44,7 @@ const ThirdPartyNode: React.FC<{ data: any }> = ({ data }) => {
 };
 
 // 定义节点类型
-const nodeTypes: NodeTypes = {
+const nodeTypes = {
   logic: LogicNode,
   fhir: FhirNode,
   thirdParty: ThirdPartyNode

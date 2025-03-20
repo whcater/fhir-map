@@ -26,8 +26,8 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
     let nodeId = 0;
 
     // 添加逻辑模型节点
-    dataDomains.forEach(domain => {
-      domain.logicalDtos.forEach(dto => {
+    dataDomains.forEach((domain: DataDomain) => {
+      domain.logicalDtos.forEach((dto: LogicDto) => {
         nodes.push({
           id: `logic-${dto.id}`,
           type: 'logic',
@@ -42,7 +42,7 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
       });
 
       // 添加第三方模型节点
-      domain.thirdPartyDtos.forEach(dto => {
+      domain.thirdPartyDtos.forEach((dto: ThirdPartyDto) => {
         nodes.push({
           id: `third-party-${dto.id}`,
           type: 'thirdParty',
@@ -57,8 +57,8 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
       });
 
       // 添加边
-      domain.logicalDtos.forEach(logicDto => {
-        logicDto.meta.fields.forEach(field => {
+      domain.logicalDtos.forEach((logicDto: LogicDto) => {
+        logicDto.meta.fields.forEach((field: any) => {
           if (field.third_party_mapping) {
             edges.push({
               id: `edge-${logicDto.id}-${field.third_party_mapping.third_party_dto}`,
@@ -81,11 +81,11 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
     return { initialNodes: nodes, initialEdges: edges };
   }, [dataDomains]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, _, onNodesChange] = useNodesState(initialNodes);
+  const [edges, __, onEdgesChange] = useEdgesState(initialEdges);
 
   // 节点点击处理
-  const onNodeClickHandler = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeClickHandler = useCallback((_: React.MouseEvent, node: Node) => {
     if (onNodeClick) {
       onNodeClick({
         id: node.id,
@@ -98,7 +98,7 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
 
   // 自定义节点样式
   const nodeTypes = useMemo(() => ({
-    logic: ({ data }: any) => (
+    logic: ({ data }: { data: any }) => (
       <div className="px-4 py-2 shadow-lg rounded-lg bg-white border-2 border-blue-500">
         <div className="font-bold text-blue-600">{data.label}</div>
         {data.description && (
@@ -109,7 +109,7 @@ const LogicModelGraph: React.FC<LogicModelGraphProps> = ({ dataDomains, onNodeCl
         </div>
       </div>
     ),
-    thirdParty: ({ data }: any) => (
+    thirdParty: ({ data }: { data: any }) => (
       <div className="px-4 py-2 shadow-lg rounded-lg bg-white border-2 border-green-500">
         <div className="font-bold text-green-600">{data.label}</div>
         {data.description && (

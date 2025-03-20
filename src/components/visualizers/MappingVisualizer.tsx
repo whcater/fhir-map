@@ -45,7 +45,7 @@ const MappingVisualizer: React.FC<MappingVisualizerProps> = ({
       const newEdges: Edge[] = [];
       
       // 添加源模型节点
-      sourceModel.fields.forEach((field, index) => {
+      sourceModel.fields.forEach((field: any, index: number) => {
         newNodes.push({
           id: `source-${field.id}`,
           type: 'default',
@@ -73,7 +73,7 @@ const MappingVisualizer: React.FC<MappingVisualizerProps> = ({
       });
       
       // 添加目标模型节点
-      targetModel.fields.forEach((field, index) => {
+      targetModel.fields.forEach((field: any, index: number) => {
         newNodes.push({
           id: `target-${field.id}`,
           type: 'default',
@@ -101,7 +101,7 @@ const MappingVisualizer: React.FC<MappingVisualizerProps> = ({
       });
       
       // 添加映射关系边
-      mappingConfig.mappings.forEach((mapping, index) => {
+      mappingConfig.mappings.forEach((mapping: any, index: number) => {
         const sourceNodeId = `source-${mapping.sourceFieldId}`;
         const targetNodeId = `target-${mapping.targetFieldId}`;
         
@@ -116,7 +116,7 @@ const MappingVisualizer: React.FC<MappingVisualizerProps> = ({
             data: { 
               label: (
                 <div className="text-xs p-1">
-                  {mapping.transformations.map(t => t.type).join(', ')}
+                  {mapping.transformations.map((t: any) => t.type).join(', ')}
                 </div>
               ),
               transformations: mapping.transformations 

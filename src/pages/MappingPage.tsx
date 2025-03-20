@@ -34,19 +34,88 @@
 
 // export default MappingPage; 
 
-import React from 'react';
-import { Card } from 'antd';
-import { DataDomain } from '../types/metadata';
+import React, { useState } from 'react';
+import { Card, Tabs, message } from 'antd';
+import MappingConfigurator from '../components/mapping/MappingConfigurator';
+import VisualMapper from '../components/mapping/VisualMapper';
+import type { MappingConfig } from '../types/logicModel';
+import type { DataDomain } from '../types/metadata';
+
+const { TabPane } = Tabs;
 
 interface MappingPageProps {
   dataDomains: DataDomain[];
 }
 
 const MappingPage: React.FC<MappingPageProps> = ({ dataDomains }) => {
+  const [currentMapping, setCurrentMapping] = useState<MappingConfig | null>(null);
+  const [sourceFields] = useState<any[]>([]);
+  const [targetFields] = useState<any[]>([]);
+
+  const handleMappingSave = async (config: MappingConfig) => {
+    try {
+      setCurrentMapping(config);
+      message.success('映射配置保存成功');
+    } catch (error) {
+      message.error('保存映射配置失败');
+    }
+  };
+
   return (
-    <Card title="映射配置">
-      <div>映射配置页面（待实现）</div>
-    </Card>
+    <div className="p-6">
+      <Card title="FHIR映射工具" className="mb-6">
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="映射配置" key="1">
+            <MappingConfigurator
+              dataDomains={dataDomains}
+              onSave={handleMappingSave}
+            />
+          </TabPane>
+          <TabPane tab="可视化映射" key="2">
+            {currentMapping && (
+              <VisualMapper
+                mappingConfig={currentMapping}
+                sourceFields={sourceFields}
+                targetFields={targetFields}
+              />
+            )}
+          </TabPane>
+          <TabPane tab="数据转换" key="3">
+            <Card title="数据转换">
+              {/* 这里可以添加数据转换的UI组件 */}
+              <div>数据转换功能开发中...</div>
+            </Card>
+          </TabPane>
+        </Tabs>
+      </Card>
+
+      <Card title="使用说明" className="mb-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium mb-2">配置步骤</h3>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>选择数据域和需要映射的模型</li>
+              <li>配置字段映射关系</li>
+              <li>添加必要的数据转换规则</li>
+              <li>保存映射配置</li>
+              <li>在可视化页面查看映射关系</li>
+              <li>使用数据转换功能验证映射结果</li>
+            </ol>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-medium mb-2">支持的功能</h3>
+            <ul className="list-disc list-inside space-y-2">
+              <li>FHIR资源与逻辑模型的双向映射</li>
+              <li>第三方数据格式的导入和转换</li>
+              <li>可视化的映射关系展示</li>
+              <li>灵活的数据转换规则配置</li>
+              <li>支持XML和JSON格式的数据处理</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 };
 

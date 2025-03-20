@@ -1,11 +1,73 @@
 import { LogicDto, ThirdPartyDto, FhirMapping, ThirdPartyMapping } from '../types/metadata';
 import { FhirResource, FhirBundle } from '../types/fhir';
 import { FieldMapping } from '../types/mapping';
-import { parseString } from 'xml2js';
-import { promisify } from 'util';
 import { DataDomain } from '../types/metadata';
 
-const parseXmlAsync = promisify(parseString);
+// 替换为浏览器原生 DOMParser
+const parseXmlAsync = (xml: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xml, "text/xml");
+      
+      // 检查解析错误
+      const parseError = xmlDoc.querySelector('parsererror');
+      if (parseError) {
+        reject(new Error(parseError.textContent || 'XML parsing error'));
+        return;
+      }
+      
+      // 将 XML 转换为类似 xml2js 格式的 JSON
+      const convertXmlToJson = (node: Element): any => {
+        const obj: any = {};
+        
+        // 处理属性
+        Array.from(node.attributes).forEach(attr => {
+          obj[`$`] = obj[`$`] || {};
+          obj[`$`][attr.name] = attr.value;
+        });
+        
+        // 处理子元素
+        const childElements = Array.from(node.children);
+        childElements.forEach(child => {
+          const childName = child.nodeName;
+          const childJson = convertXmlToJson(child);
+          
+          if (obj[childName]) {
+            // 如果已经存在同名子元素，则转为数组
+            if (!Array.isArray(obj[childName])) {
+              obj[childName] = [obj[childName]];
+            }
+            obj[childName].push(childJson);
+          } else {
+            obj[childName] = childJson;
+          }
+        });
+        
+        // 如果节点只有文本内容，且没有属性和子节点
+        if (Object.keys(obj).length === 0 && node.textContent) {
+          return node.textContent.trim();
+        }
+        
+        // 如果节点有文本内容，且有属性或子节点
+        if (node.textContent && node.textContent.trim() && Object.keys(obj).length > 0) {
+          obj[`_`] = node.textContent.trim();
+        }
+        
+        return obj;
+      };
+      
+      // 获取根元素并转换
+      const rootElement = xmlDoc.documentElement;
+      const result: any = {};
+      result[rootElement.nodeName] = convertXmlToJson(rootElement);
+      
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 /**
  * 解析JSON路径并获取值
@@ -274,9 +336,62 @@ export const generateMetadataFromData = (data: string, isXml: boolean = false): 
   
   // 解析数据
   if (isXml) {
-    // 需要引入xml2js包处理XML
-    console.warn('XML处理需要额外引入xml2js包');
-    return null;
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(data, "text/xml");
+      
+      // 检查解析错误
+      const parseError = xmlDoc.querySelector('parsererror');
+      if (parseError) {
+        console.error('XML解析失败:', parseError.textContent);
+        return null;
+      }
+      
+      // 简化的XML到JSON转换
+      // 在实际使用中可能需要更完善的转换逻辑
+      function xmlToJson(xml: Element): any {
+        const obj: any = {};
+        if (xml.nodeType === Node.TEXT_NODE && xml.nodeValue?.trim()) {
+          return xml.nodeValue.trim();
+        }
+        
+        if (xml.attributes && xml.attributes.length > 0) {
+          obj["_attributes"] = {};
+          for (let i = 0; i < xml.attributes.length; i++) {
+            const attribute = xml.attributes[i];
+            obj["_attributes"][attribute.nodeName] = attribute.nodeValue;
+          }
+        }
+        
+        if (xml.hasChildNodes()) {
+          for (let i = 0; i < xml.childNodes.length; i++) {
+            const item = xml.childNodes[i];
+            if (item.nodeType === Node.ELEMENT_NODE) {
+              const nodeName = item.nodeName;
+              
+              if (typeof(obj[nodeName]) === "undefined") {
+                obj[nodeName] = xmlToJson(item as Element);
+              } else {
+                if (typeof(obj[nodeName].push) === "undefined") {
+                  const old = obj[nodeName];
+                  obj[nodeName] = [];
+                  obj[nodeName].push(old);
+                }
+                obj[nodeName].push(xmlToJson(item as Element));
+              }
+            } else if (item.nodeType === Node.TEXT_NODE && item.nodeValue?.trim()) {
+              obj["_text"] = item.nodeValue.trim();
+            }
+          }
+        }
+        return obj;
+      }
+      
+      parsedData = xmlToJson(xmlDoc.documentElement);
+    } catch (error) {
+      console.error('XML处理失败:', error);
+      return null;
+    }
   } else {
     try {
       parsedData = JSON.parse(data);

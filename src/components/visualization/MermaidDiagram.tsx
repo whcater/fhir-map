@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import mermaid from 'mermaid';
-import { DataDomain } from '../../types/metadata';
+import { DataDomain, LogicDto, ThirdPartyDto } from '../../types/metadata';
 
 interface MermaidDiagramProps {
   dataDomains: DataDomain[];
@@ -27,27 +27,27 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ dataDomains, type = 'er
     let diagram = 'erDiagram\n';
     
     // 添加逻辑模型实体
-    dataDomains.forEach(domain => {
-      domain.logicalDtos.forEach(dto => {
+    dataDomains.forEach((domain: DataDomain) => {
+      domain.logicalDtos.forEach((dto: LogicDto) => {
         diagram += `    ${dto.name} {\n`;
-        dto.meta.fields.forEach(field => {
+        dto.meta.fields.forEach((field: any) => {
           diagram += `        ${field.type} ${field.name}\n`;
         });
         diagram += '    }\n\n';
       });
 
       // 添加第三方模型实体
-      domain.thirdPartyDtos.forEach(dto => {
+      domain.thirdPartyDtos.forEach((dto: ThirdPartyDto) => {
         diagram += `    ${dto.name} {\n`;
-        dto.meta.fields.forEach(field => {
+        dto.meta.fields.forEach((field: any) => {
           diagram += `        ${field.type} ${field.name}\n`;
         });
         diagram += '    }\n\n';
       });
 
       // 添加关系
-      domain.logicalDtos.forEach(logicDto => {
-        logicDto.meta.fields.forEach(field => {
+      domain.logicalDtos.forEach((logicDto: LogicDto) => {
+        logicDto.meta.fields.forEach((field: any) => {
           if (field.third_party_mapping) {
             diagram += `    ${logicDto.name} ||--o{ ${field.third_party_mapping.third_party_dto} : "maps to"\n`;
           }
@@ -62,17 +62,17 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ dataDomains, type = 'er
   const generateFlowchart = useMemo(() => {
     let diagram = 'graph TD\n';
     
-    dataDomains.forEach(domain => {
-      domain.logicalDtos.forEach(dto => {
+    dataDomains.forEach((domain: DataDomain) => {
+      domain.logicalDtos.forEach((dto: LogicDto) => {
         diagram += `    ${dto.name}[${dto.name}]\n`;
       });
 
-      domain.thirdPartyDtos.forEach(dto => {
+      domain.thirdPartyDtos.forEach((dto: ThirdPartyDto) => {
         diagram += `    ${dto.name}[${dto.name}]\n`;
       });
 
-      domain.logicalDtos.forEach(logicDto => {
-        logicDto.meta.fields.forEach(field => {
+      domain.logicalDtos.forEach((logicDto: LogicDto) => {
+        logicDto.meta.fields.forEach((field: any) => {
           if (field.third_party_mapping) {
             diagram += `    ${logicDto.name} --> ${field.third_party_mapping.third_party_dto}\n`;
           }
@@ -87,17 +87,17 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ dataDomains, type = 'er
   const generateSequenceDiagram = useMemo(() => {
     let diagram = 'sequenceDiagram\n';
     
-    dataDomains.forEach(domain => {
-      domain.logicalDtos.forEach(logicDto => {
+    dataDomains.forEach((domain: DataDomain) => {
+      domain.logicalDtos.forEach((logicDto: LogicDto) => {
         diagram += `    participant ${logicDto.name}\n`;
       });
 
-      domain.thirdPartyDtos.forEach(dto => {
+      domain.thirdPartyDtos.forEach((dto: ThirdPartyDto) => {
         diagram += `    participant ${dto.name}\n`;
       });
 
-      domain.logicalDtos.forEach(logicDto => {
-        logicDto.meta.fields.forEach(field => {
+      domain.logicalDtos.forEach((logicDto: LogicDto) => {
+        logicDto.meta.fields.forEach((field: any) => {
           if (field.third_party_mapping) {
             diagram += `    ${logicDto.name}->>${field.third_party_mapping.third_party_dto}: Map field ${field.name}\n`;
             diagram += `    ${field.third_party_mapping.third_party_dto}-->>${logicDto.name}: Return mapped value\n`;
