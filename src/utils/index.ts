@@ -17,7 +17,10 @@ export const generateFieldsFromJson = (
   jsonObj: Record<string, any>,
   parentId?: string
 ): FieldMetadata[] => {
-  return Object.entries(jsonObj).map(([key, value]) => {
+  let result: FieldMetadata[] = [];
+  
+  // 处理对象的所有键值对
+  Object.entries(jsonObj).forEach(([key, value]) => {
     const type = determineType(value);
     const field: FieldMetadata = {
       id: generateId(),
@@ -26,17 +29,29 @@ export const generateFieldsFromJson = (
       isRequired: true,
       parentId
     };
-
+    
+    // 添加当前字段到结果集
+    result.push(field);
+    
+    // 处理对象类型
     if (type === FieldType.OBJECT && value) {
-      field.children = generateFieldsFromJson(value, field.id);
-    } else if (type === FieldType.ARRAY && Array.isArray(value) && value.length > 0) {
+      // 递归处理子字段
+      const childFields = generateFieldsFromJson(value, field.id);
+      // 将子字段添加到结果集
+      result = result.concat(childFields);
+    } 
+    // 处理数组类型
+    else if (type === FieldType.ARRAY && Array.isArray(value) && value.length > 0) {
+      // 如果数组的第一个元素是对象，递归处理
       if (typeof value[0] === 'object' && value[0] !== null) {
-        field.children = generateFieldsFromJson(value[0], field.id);
+        const childFields = generateFieldsFromJson(value[0], field.id);
+        // 将子字段添加到结果集
+        result = result.concat(childFields);
       }
     }
-
-    return field;
   });
+  
+  return result;
 };
 
 /**

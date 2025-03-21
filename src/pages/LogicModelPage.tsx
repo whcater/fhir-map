@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faPlus, 
-  faEdit, 
-  faTrash, 
+import {
+  faPlus,
+  faEdit,
+  faTrash,
   faSearch,
   faFilter,
   faSave,
@@ -14,12 +14,153 @@ import {
 import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
 import { LogicDtoModel, DataDomain, FieldType, FieldMetadata } from '../types';
-import { generateId } from '../utils/helpers';
-import { generateFieldsFromJson } from '../utils';
+import { generateId, generateFieldsFromJson } from '../utils';
+
+// 完整的FieldItem组件
+const FieldItem = ({ field, level = 0, updateField, removeField, addField, addObjectField, addArrayField, getChildFields }: { field: FieldMetadata, level?: number, updateField: (id: string, updates: Partial<FieldMetadata>) => void, removeField: (id: string) => void, addField: (parentId?: string) => void, addObjectField: (parentId?: string) => void, addArrayField: (parentId?: string) => void, getChildFields: (fieldId: string) => FieldMetadata[] }) => {
+  const childFields = getChildFields(field.id);
+  const isContainer = field.type === FieldType.OBJECT || field.type === FieldType.ARRAY;
+  const [isExpanded, setIsExpanded] = useState(level < 1); // 默认展开第一层
+  
+  const fieldIcon = () => {
+    switch (field.type) {
+      case FieldType.OBJECT:
+        return <span className="text-green-500 font-bold mr-1">{isExpanded ? '▼' : '►'}</span>;
+      case FieldType.ARRAY:
+        return <span className="text-purple-500 font-bold mr-1">{isExpanded ? '▼' : '►'}</span>;
+      case FieldType.STRING:
+        return <span className="text-blue-500 mr-1">Aa</span>;
+      case FieldType.NUMBER:
+        return <span className="text-orange-500 mr-1">123</span>;
+      case FieldType.BOOLEAN:
+        return <span className="text-red-500 mr-1">tf</span>;
+      case FieldType.DATE:
+      case FieldType.DATETIME:
+        return <span className="text-indigo-500 mr-1">📅</span>;
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <div
+      className="border-l-2 border-gray-200 dark:border-gray-700 mb-1 pl-2 py-1"
+      style={{ marginLeft: `${level * 8}px` }}
+    >
+      <div className="flex items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md py-1 px-1">
+        {isContainer && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mr-2 w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-700"
+          >
+            {fieldIcon()}
+          </button>
+        )}
+        
+        <div className="flex-1 grid grid-cols-6 gap-2 items-center">
+          <div className="col-span-2 flex items-center">
+            {!isContainer && fieldIcon()}
+            <input
+              type="text"
+              className="w-full rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-sm bg-white dark:bg-gray-700"
+              value={field.name}
+              onChange={e => updateField(field.id, { name: e.target.value })}
+              placeholder="字段名称"
+              required
+            />
+          </div>
+          
+          <select
+            className="col-span-1 rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-sm bg-white dark:bg-gray-700"
+            value={field.type}
+            onChange={e => updateField(field.id, { type: e.target.value as FieldType })}
+          >
+            {Object.values(FieldType).map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          
+          <div className="col-span-1 flex items-center">
+            <input
+              type="checkbox"
+              id={`required-${field.id}`}
+              className="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500 mr-1"
+              checked={field.isRequired}
+              onChange={e => updateField(field.id, { isRequired: e.target.checked })}
+            />
+            <label htmlFor={`required-${field.id}`} className="text-xs">必填</label>
+          </div>
+          
+          <input
+            type="text"
+            className="col-span-2 rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-sm bg-white dark:bg-gray-700"
+            value={field.description || ''}
+            onChange={e => updateField(field.id, { description: e.target.value })}
+            placeholder="描述（可选）"
+          />
+        </div>
+        
+        <div className="flex items-center ml-2 space-x-1">
+          {isContainer && (
+            <>
+              <button
+                onClick={() => addField(field.id)}
+                title="添加普通字段"
+                className="p-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+              </button>
+              <button
+                onClick={() => addObjectField(field.id)}
+                title="添加对象字段"
+                className="p-0.5 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs"
+              >
+                <FontAwesomeIcon icon={faIndent} />
+              </button>
+              <button
+                onClick={() => addArrayField(field.id)}
+                title="添加数组字段"
+                className="p-0.5 bg-purple-500 hover:bg-purple-600 text-white rounded-md text-xs"
+              >
+                <FontAwesomeIcon icon={faList} />
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => removeField(field.id)}
+            title="删除字段"
+            className="p-0.5 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs"
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </button>
+        </div>
+      </div>
+      
+      {isContainer && isExpanded && childFields.length > 0 && (
+        <div className="ml-2 mt-1 border-l border-gray-200 dark:border-gray-700 pl-2">
+          {childFields.map(childField => (
+            <FieldItem
+              key={childField.id}
+              field={childField}
+              level={level + 1}
+              updateField={updateField}
+              removeField={removeField}
+              addField={addField}
+              addObjectField={addObjectField}
+              addArrayField={addArrayField}
+              getChildFields={getChildFields}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 const LogicModelPage = () => {
   const { domains, logicDtoModels, addLogicDtoModel, updateLogicDtoModel, deleteLogicDtoModel } = useAppStore();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,7 +173,7 @@ const LogicModelPage = () => {
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // 重置表单
   const resetForm = () => {
     setModelName('');
@@ -41,13 +182,13 @@ const LogicModelPage = () => {
     setModelFields([]);
     setCurrentModel(null);
   };
-  
+
   // 打开新建模型的模态框
   const openCreateModal = () => {
     resetForm();
     setIsModalOpen(true);
   };
-  
+
   // 打开编辑模型的模态框
   const openEditModal = (model: LogicDtoModel) => {
     setCurrentModel(model);
@@ -57,7 +198,7 @@ const LogicModelPage = () => {
     setModelFields([...model.fields]);
     setIsModalOpen(true);
   };
-  
+
   // 添加字段
   const addField = (parentId?: string) => {
     const newField: FieldMetadata = {
@@ -67,14 +208,14 @@ const LogicModelPage = () => {
       type: FieldType.STRING,
       isRequired: false,
     };
-    
+
     if (parentId) {
       newField.parentId = parentId;
     }
-    
+
     setModelFields([...modelFields, newField]);
   };
-  
+
   // 添加子对象字段
   const addObjectField = (parentId?: string) => {
     const newField: FieldMetadata = {
@@ -85,14 +226,14 @@ const LogicModelPage = () => {
       isRequired: false,
       children: []
     };
-    
+
     if (parentId) {
       newField.parentId = parentId;
     }
-    
+
     setModelFields([...modelFields, newField]);
   };
-  
+
   // 添加数组字段
   const addArrayField = (parentId?: string) => {
     const newField: FieldMetadata = {
@@ -103,22 +244,22 @@ const LogicModelPage = () => {
       isRequired: false,
       children: []
     };
-    
+
     if (parentId) {
       newField.parentId = parentId;
     }
-    
+
     setModelFields([...modelFields, newField]);
   };
-  
+
   // 更新字段
   const updateField = (id: string, updates: Partial<FieldMetadata>) => {
-    const updatedFields = modelFields.map(field => 
+    const updatedFields = modelFields.map(field =>
       field.id === id ? { ...field, ...updates } : field
     );
     setModelFields(updatedFields);
   };
-  
+
   // 删除字段（包括子字段）
   const removeField = (id: string) => {
     // 递归获取所有子字段ID
@@ -129,24 +270,24 @@ const LogicModelPage = () => {
         ...childrenFields.flatMap(f => getChildrenIds(f.id))
       ];
     };
-    
+
     const childrenIds = getChildrenIds(id);
     const allIdsToRemove = [id, ...childrenIds];
-    
+
     const updatedFields = modelFields.filter(field => !allIdsToRemove.includes(field.id));
     setModelFields(updatedFields);
   };
-  
+
   // 获取字段的子字段
   const getChildFields = (fieldId: string) => {
     return modelFields.filter(field => field.parentId === fieldId);
   };
-  
+
   // 获取顶级字段
   const getTopLevelFields = () => {
     return modelFields.filter(field => !field.parentId);
   };
-  
+
   // 处理JSON导入
   const handleJsonImport = () => {
     try {
@@ -157,9 +298,13 @@ const LogicModelPage = () => {
       const generatedFields = generateFieldsFromJson(jsonData);
       
       if (generatedFields.length > 0) {
+        // 确保字段被正确设置
         setModelFields(prevFields => [...prevFields, ...generatedFields]);
         setIsJsonImportModalOpen(false);
         setJsonInput('');
+        
+        // 可以添加日志进行调试
+        console.log("生成的字段:", generatedFields);
       } else {
         setJsonError('无法从JSON生成有效字段');
       }
@@ -167,12 +312,12 @@ const LogicModelPage = () => {
       setJsonError('JSON格式无效: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
-  
+
   // 处理文件上传
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -188,21 +333,21 @@ const LogicModelPage = () => {
     };
     reader.readAsText(file);
   };
-  
+
   // 保存模型
   const saveModel = () => {
     if (!modelName.trim() || !modelDomainId || modelFields.length === 0) {
       alert('请填写必要信息并至少添加一个字段');
       return;
     }
-    
+
     // 检查字段是否都有名称
     const invalidFields = modelFields.filter(field => !field.name.trim());
     if (invalidFields.length > 0) {
       alert('所有字段必须有名称');
       return;
     }
-    
+
     const now = new Date().toISOString();
     if (currentModel) {
       // 更新现有模型
@@ -228,122 +373,32 @@ const LogicModelPage = () => {
       };
       addLogicDtoModel(newModel);
     }
-    
+
     setIsModalOpen(false);
     resetForm();
   };
-  
+
   // 删除模型
   const handleDeleteModel = (modelId: string) => {
     if (confirm('确定要删除此模型吗？')) {
       deleteLogicDtoModel(modelId);
     }
   };
-  
+
   // 根据搜索和筛选条件过滤模型
   const filteredModels = logicDtoModels.filter(model => {
     const matchesSearch = model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (model.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (model.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDomain = selectedDomain ? model.domainId === selectedDomain : true;
     return matchesSearch && matchesDomain;
   });
-  
+
   // 根据id获取领域名称
   const getDomainName = (domainId: string) => {
     return domains.find(domain => domain.id === domainId)?.name || '未知领域';
   };
-  
-  // 递归渲染字段及其子字段
-  const renderField = (field: FieldMetadata, level = 0) => {
-    const childFields = getChildFields(field.id);
-    const isContainer = field.type === FieldType.OBJECT || field.type === FieldType.ARRAY;
-    
-    return (
-      <div key={field.id} className="border border-gray-200 dark:border-gray-700 rounded-md mb-2 overflow-hidden">
-        <div className={`bg-gray-50 dark:bg-gray-800 p-2 ${level > 0 ? 'pl-' + (level * 4) : ''}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex-1 grid grid-cols-4 gap-2">
-              <input
-                type="text"
-                className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-700"
-                value={field.name}
-                onChange={e => updateField(field.id, { name: e.target.value })}
-                placeholder="字段名称"
-                required
-              />
-              <select
-                className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-700"
-                value={field.type}
-                onChange={e => updateField(field.id, { type: e.target.value as FieldType })}
-              >
-                {Object.values(FieldType).map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id={`required-${field.id}`}
-                  className="rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500 mr-2"
-                  checked={field.isRequired}
-                  onChange={e => updateField(field.id, { isRequired: e.target.checked })}
-                />
-                <label htmlFor={`required-${field.id}`} className="text-sm">必填</label>
-              </div>
-              <input
-                type="text"
-                className="w-full rounded border border-gray-300 dark:border-gray-600 px-2 py-1 bg-white dark:bg-gray-700"
-                value={field.description || ''}
-                onChange={e => updateField(field.id, { description: e.target.value })}
-                placeholder="描述（可选）"
-              />
-            </div>
-            <div className="flex items-center ml-2">
-              {isContainer && (
-                <div className="flex space-x-1 mr-2">
-                  <button
-                    onClick={() => addField(field.id)}
-                    title="添加普通字段"
-                    className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs"
-                  >
-                    <FontAwesomeIcon icon={faPlus} />
-                  </button>
-                  <button
-                    onClick={() => addObjectField(field.id)}
-                    title="添加对象字段"
-                    className="p-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-xs"
-                  >
-                    <FontAwesomeIcon icon={faIndent} />
-                  </button>
-                  <button
-                    onClick={() => addArrayField(field.id)}
-                    title="添加数组字段"
-                    className="p-1 bg-purple-500 hover:bg-purple-600 text-white rounded-md text-xs"
-                  >
-                    <FontAwesomeIcon icon={faList} />
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={() => removeField(field.id)}
-                title="删除字段"
-                className="p-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-xs"
-              >
-                <FontAwesomeIcon icon={faTrash} />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {childFields.length > 0 && (
-          <div className="pl-4 pr-2 py-2 border-t border-gray-200 dark:border-gray-700">
-            {childFields.map(childField => renderField(childField, level + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
-  
+
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -357,7 +412,7 @@ const LogicModelPage = () => {
             新建模型
           </button>
         </div>
-        
+
         {/* 搜索和筛选 */}
         <div className="flex flex-col md:flex-row gap-4 md:items-center">
           <div className="relative flex-1">
@@ -372,7 +427,7 @@ const LogicModelPage = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="relative md:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
@@ -389,7 +444,7 @@ const LogicModelPage = () => {
             </select>
           </div>
         </div>
-        
+
         {/* 模型列表 */}
         {filteredModels.length > 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -415,8 +470,8 @@ const LogicModelPage = () => {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredModels.map(model => (
-                  <tr 
-                    key={model.id} 
+                  <tr
+                    key={model.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -468,7 +523,7 @@ const LogicModelPage = () => {
           </div>
         )}
       </div>
-      
+
       {/* 模型编辑模态框 */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -484,7 +539,7 @@ const LogicModelPage = () => {
                 &times;
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* 基本信息 */}
               <div className="space-y-4">
@@ -533,7 +588,7 @@ const LogicModelPage = () => {
                   />
                 </div>
               </div>
-              
+
               {/* 字段列表 */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -569,10 +624,22 @@ const LogicModelPage = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 {getTopLevelFields().length > 0 ? (
                   <div className="space-y-2">
-                    {getTopLevelFields().map(field => renderField(field))}
+                    {getTopLevelFields().map(field => (
+                      <FieldItem
+                        key={field.id}
+                        field={field}
+                        level={0}
+                        updateField={updateField}
+                        removeField={removeField}
+                        addField={addField}
+                        addObjectField={addObjectField}
+                        addArrayField={addArrayField}
+                        getChildFields={getChildFields}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-md">
@@ -599,7 +666,7 @@ const LogicModelPage = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -618,7 +685,7 @@ const LogicModelPage = () => {
           </div>
         </div>
       )}
-      
+
       {/* JSON导入模态框 */}
       {isJsonImportModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -636,7 +703,7 @@ const LogicModelPage = () => {
                 &times;
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -650,7 +717,7 @@ const LogicModelPage = () => {
                   rows={10}
                 />
               </div>
-              
+
               <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -670,14 +737,14 @@ const LogicModelPage = () => {
                   或者直接粘贴JSON数据到上面的文本框
                 </span>
               </div>
-              
+
               {jsonError && (
                 <div className="p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md">
                   {jsonError}
                 </div>
               )}
             </div>
-            
+
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
               <button
                 onClick={() => {
