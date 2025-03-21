@@ -79,14 +79,23 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   const generateMermaidDefinition = (): string => {
     // 检查模型字段是否存在
     if (!model.fields || model.fields.length === 0) {
-      return `classDiagram\n  class "${model.name}" {\n    (无字段)\n  }\n`;
+      const safeModelName = model.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      return `classDiagram\n  class "${safeModelName}" {\n    (无字段)\n  }\n`;
     }
     
     // 构建类图定义
     let definition = `classDiagram\n`;
     
+    // 确保在classDiagram后有明确的换行
+    if (!definition.endsWith('\n')) {
+      definition += '\n';
+    }
+    
+    // 安全处理模型名称
+    const safeModelName = model.name.replace(/[^a-zA-Z0-9_]/g, '_');
+    
     // 添加主类
-    definition += `  class "${model.name}" {\n`;
+    definition += `  class "${safeModelName}" {\n`;
     
     // 根级字段
     const rootFields = model.fields.filter(field => !field.parentId);
@@ -96,7 +105,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     } else {
       rootFields.forEach(field => {
         // 安全检查字段名称
-        const fieldName = field.name ? field.name.replace(/"/g, '\\"') : '未命名字段';
+        const fieldName = field.name ? field.name.replace(/["\s]/g, '_') : '未命名字段';
         const requiredMark = field.isRequired ? '*' : '';
         definition += `    ${fieldName}${requiredMark}: ${formatFieldType(field.type)}\n`;
       });
@@ -112,13 +121,16 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     objectFields.forEach(objField => {
       // 为每个对象/数组字段创建子类
       try {
-        definition += createSubClassDefinition(objField, model.fields, model.name);
+        definition += createSubClassDefinition(objField, model.fields, safeModelName);
       } catch (subclassError) {
         console.error(`创建子类定义时出错 (${objField.name}):`, subclassError);
         // 添加错误注释而不是抛出异常
         definition += `  %% 创建子类 "${objField.name}" 时出错: ${subclassError instanceof Error ? subclassError.message : String(subclassError)}\n`;
       }
     });
+    
+    // 输出一下生成的定义，便于调试
+    console.log("生成的Mermaid定义:", definition);
     
     return definition;
   };
@@ -129,10 +141,13 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     allFields: FieldMetadata[], 
     parentClassName: string
   ): string => {
-    // 确保字段名称安全有效
-    const safeParentName = parentField.name ? parentField.name.replace(/"/g, '\\"') : '未命名字段';
-    const className = `${parentClassName}_${safeParentName}`;
-    let definition = `  class "${className}" {\n`;
+    // 确保字段名称和类名安全有效
+    const safeParentName = parentField.name ? parentField.name.replace(/["\s]/g, '_') : '未命名字段';
+    
+    // 确保类名不包含特殊字符
+    const safeClassName = `${parentClassName}_${safeParentName}`.replace(/[^a-zA-Z0-9_]/g, '_');
+    
+    let definition = `  class "${safeClassName}" {\n`;
     
     // 添加子字段
     const childFields = allFields.filter(field => field.parentId === parentField.id);
@@ -142,7 +157,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     } else {
       childFields.forEach(field => {
         // 确保字段名称安全有效
-        const fieldName = field.name ? field.name.replace(/"/g, '\\"') : '未命名字段';
+        const fieldName = field.name ? field.name.replace(/["\s]/g, '_') : '未命名字段';
         const requiredMark = field.isRequired ? '*' : '';
         definition += `    ${fieldName}${requiredMark}: ${formatFieldType(field.type)}\n`;
       });
@@ -152,9 +167,9 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     
     // 添加关系连接
     if (parentField.type === FieldType.ARRAY) {
-      definition += `  "${parentClassName}" "1" --o "*" "${className}" : ${safeParentName}\n`;
+      definition += `  "${parentClassName}" "1" --o "*" "${safeClassName}" : ${safeParentName}\n`;
     } else {
-      definition += `  "${parentClassName}" "1" --o "1" "${className}" : ${safeParentName}\n`;
+      definition += `  "${parentClassName}" "1" --o "1" "${safeClassName}" : ${safeParentName}\n`;
     }
     
     // 递归处理子对象/数组字段
@@ -164,7 +179,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     
     nestedObjectFields.forEach(objField => {
       try {
-        definition += createSubClassDefinition(objField, allFields, className);
+        definition += createSubClassDefinition(objField, allFields, safeClassName);
       } catch (nestedError) {
         console.error(`创建嵌套子类定义时出错 (${objField.name}):`, nestedError);
         // 添加错误注释而不是抛出异常
