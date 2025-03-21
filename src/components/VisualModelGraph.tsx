@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import mermaid from 'mermaid';
 import { LogicDtoModel, FieldMetadata, FieldType } from '../types';
 
@@ -17,6 +17,8 @@ interface VisualModelGraphProps {
 export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme = 'light' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphId = `graph-${model.id}`;
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [scale, setScale] = useState(100); // 缩放比例，默认100%
 
   useEffect(() => {
     // 配置Mermaid
@@ -26,10 +28,14 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         theme: theme === 'dark' ? 'dark' : 'default',
         securityLevel: 'loose',
         er: {
-          diagramPadding: 20
+          diagramPadding: 40, // 增加内边距
+          layoutDirection: 'TB', // 从上到下的布局
+          minEntityWidth: 100,
+          minEntityHeight: 75,
+          entityPadding: 15
         },
         flowchart: {
-          diagramPadding: 20
+          diagramPadding: 40
         },
         // 添加更多配置以处理可能的渲染问题
         logLevel: 'error',
@@ -40,13 +46,18 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
           diagramMarginY: 10
         },
         class: {
-          diagramPadding: 20
+          diagramPadding: 40
         }
       });
 
-      if (containerRef.current) {
-        renderGraph();
-      }
+      // 使用setTimeout延迟渲染，确保DOM已准备好
+      const timer = setTimeout(() => {
+        if (containerRef.current) {
+          renderGraph();
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
     } catch (initError) {
       console.error('Mermaid初始化失败:', initError);
       if (containerRef.current) {
@@ -82,6 +93,55 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       }
     };
   }, [model]);
+
+  // 全屏功能
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // 切换全屏
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      // 进入全屏
+      if (containerRef.current?.parentElement) {
+        containerRef.current.parentElement.requestFullscreen().catch(err => {
+          console.error(`全屏错误: ${err.message}`);
+        });
+      }
+    } else {
+      // 退出全屏
+      document.exitFullscreen().catch(err => {
+        console.error(`退出全屏错误: ${err.message}`);
+      });
+    }
+  };
+
+  // 调整缩放比例
+  const adjustScale = (increment: boolean) => {
+    setScale(prevScale => {
+      const newScale = increment 
+        ? Math.min(prevScale + 20, 200) // 增加至最大200%
+        : Math.max(prevScale - 20, 60);  // 减少至最小60%
+      
+      // 应用新的缩放比例
+      if (containerRef.current) {
+        const mermaidDiv = containerRef.current.querySelector('.mermaid');
+        if (mermaidDiv) {
+          (mermaidDiv as HTMLElement).style.transform = `scale(${newScale / 100})`;
+          (mermaidDiv as HTMLElement).style.transformOrigin = 'top left';
+        }
+      }
+      
+      return newScale;
+    });
+  };
 
   // 将字段类型转换为更易读的格式
   const formatFieldType = (type: FieldType): string => {
@@ -221,59 +281,104 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     
     try {
       const definition = generateMermaidDefinition();
-      containerRef.current.innerHTML = `<div class="mermaid">${definition}</div>`;
+      containerRef.current.innerHTML = `<div class="mermaid" style="transform: scale(${scale/100}); transform-origin: top left;">${definition}</div>`;
       
-      // 解析和渲染图表
-      await mermaid.run();
-    } catch (error) {
-      console.error('渲染视觉模型图出错:', error);
-      
-      // 改进错误处理，提供更详细的错误信息
-      let errorMessage = '未知错误';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        try {
-          errorMessage = JSON.stringify(error, null, 2);
-        } catch {
-          errorMessage = Object.keys(error).map(key => `${key}: ${(error as Record<string, unknown>)[key]}`).join(', ');
+      // 使用try-catch包装mermaid.run以捕获特定错误
+      try {
+        // 解析和渲染图表
+        await mermaid.run();
+      } catch (mermaidError) {
+        console.error('Mermaid渲染错误，尝试重试:', mermaidError);
+        
+        // 如果是"Could not find a suitable point"错误，等待一会儿再尝试渲染一次
+        if (mermaidError instanceof Error && 
+            mermaidError.message.includes('Could not find a suitable point')) {
+          setTimeout(async () => {
+            try {
+              await mermaid.run();
+            } catch (retryError) {
+              // 重试失败，显示错误信息
+              displayError(retryError);
+            }
+          }, 200);
+        } else {
+          // 其他错误直接显示
+          displayError(mermaidError);
         }
-      } else {
-        errorMessage = String(error);
       }
-      
-      containerRef.current.innerHTML = `
-          <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
-            <p class="font-semibold mb-2">渲染视觉模型图时出错</p>
-            <pre class="text-xs overflow-auto max-h-32">${errorMessage}</pre>
-          </div>
-        `;
+    } catch (error) {
+      displayError(error);
     }
+  };
+  
+  // 显示错误信息的辅助函数
+  const displayError = (error: unknown) => {
+    if (!containerRef.current) return;
+    
+    console.error('渲染视觉模型图出错:', error);
+    
+    // 改进错误处理，提供更详细的错误信息
+    let errorMessage = '未知错误';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      try {
+        errorMessage = JSON.stringify(error, null, 2);
+      } catch {
+        errorMessage = Object.keys(error).map(key => `${key}: ${(error as Record<string, unknown>)[key]}`).join(', ');
+      }
+    } else {
+      errorMessage = String(error);
+    }
+    
+    containerRef.current.innerHTML = `
+      <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
+        <p class="font-semibold mb-2">渲染视觉模型图时出错</p>
+        <pre class="text-xs overflow-auto max-h-32">${errorMessage}</pre>
+      </div>
+    `;
   };
 
   return (
-    <div className="visual-model-graph">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 overflow-auto">
+    <div className={`visual-model-graph ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 ${isFullscreen ? 'h-full' : 'overflow-auto'}`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-serif font-semibold">逻辑模型视觉图</h3>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => {
-                if (containerRef.current) {
-                  const mermaidDiv = containerRef.current.querySelector('.mermaid');
-                  if (mermaidDiv) {
-                    mermaidDiv.classList.toggle('scale-90');
-                    mermaidDiv.classList.toggle('scale-100');
-                  }
-                }
-              }}
+              onClick={() => adjustScale(false)}
               className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
-              title="缩放图表"
+              title="缩小图表"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
+              </svg>
+            </button>
+            <span className="text-xs text-gray-600 dark:text-gray-300">{scale}%</span>
+            <button
+              onClick={() => adjustScale(true)}
+              className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+              title="放大图表"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
               </svg>
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+              title={isFullscreen ? "退出全屏" : "全屏显示"}
+            >
+              {isFullscreen ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0l5 0m-5 0l0 5M9 15l-5 5m0 0l5 0m-5 0l0 -5M15 9l5 -5m0 0l-5 0m5 0l0 5M15 15l5 5m0 0l-5 0m5 0l0 -5" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
             </button>
             <button
               onClick={() => renderGraph()}
@@ -289,7 +394,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         <div 
           ref={containerRef} 
           id={graphId}
-          className="w-full overflow-x-auto"
+          className={`w-full ${isFullscreen ? 'h-[calc(100%-40px)]' : 'overflow-x-auto'}`}
         >
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
