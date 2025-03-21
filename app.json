@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "appName": "FHIR映射逻辑模型设计器"
+  },
+  "domains": [
+    {
+      "id": "patient",
+      "name": "患者信息",
+      "description": "患者基本信息领域"
+    },
+    {
+      "id": "medication",
+      "name": "用药信息",
+      "description": "患者用药信息领域"
+    },
+    {
+      "id": "diagnosis",
+      "name": "诊断信息",
+      "description": "患者诊断信息领域"
+    }
+  ],
+  "logicDtoModels": [],
+  "thirdPartyModels": [],
+  "mappingConfigurations": []
+} 
