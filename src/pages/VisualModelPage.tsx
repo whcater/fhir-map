@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faSearch, faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faSearch, faFilter, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
 import VisualModelGraph from '../components/VisualModelGraph';
@@ -49,6 +49,20 @@ const VisualModelPage = () => {
   useEffect(() => {
     if (selectedModelId) {
       const model = logicDtoModels.find(m => m.id === selectedModelId) || null;
+      
+      // 验证模型数据的有效性
+      if (model) {
+        const isValid = 
+          model.fields && 
+          Array.isArray(model.fields) && 
+          model.name && 
+          typeof model.name === 'string';
+        
+        if (!isValid) {
+          console.error('模型数据无效:', model);
+        }
+      }
+      
       setSelectedModel(model);
     } else {
       setSelectedModel(null);
@@ -162,6 +176,18 @@ const VisualModelPage = () => {
                 {selectedModel.description && (
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
                     <p className="text-sm text-gray-600 dark:text-gray-300">{selectedModel.description}</p>
+                  </div>
+                )}
+                
+                {/* 警告提示：无字段 */}
+                {(!selectedModel.fields || selectedModel.fields.length === 0) && (
+                  <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-md">
+                    <div className="flex items-center">
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="text-yellow-600 dark:text-yellow-400 mr-2" />
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        此模型没有字段。请先在逻辑模型设计中添加字段后再查看视觉模型图。
+                      </p>
+                    </div>
                   </div>
                 )}
                 
