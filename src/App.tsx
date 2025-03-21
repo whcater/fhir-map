@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import HomePage from './pages/HomePage'
 import LogicModelPage from './pages/LogicModelPage'
+import VisualModelPage from './pages/VisualModelPage'
 import './index.css'
 
 function App() {
@@ -12,6 +13,8 @@ function App() {
         return <HomePage onNavigate={setCurrentPage} />
       case 'logic-models':
         return <LogicModelPage />
+      case 'visual-models':
+        return <VisualModelPage />
       default:
         return <HomePage onNavigate={setCurrentPage} />
     }

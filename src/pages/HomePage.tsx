@@ -4,7 +4,8 @@ import {
   faDiagramProject, 
   faFileImport, 
   faCodeBranch,
-  faArrowRight
+  faArrowRight,
+  faImage
 } from '@fortawesome/free-solid-svg-icons';
 import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
@@ -104,7 +105,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
         {/* 功能介绍卡片 */}
         <section>
           <h2 className="text-2xl font-serif font-bold mb-6">主要功能</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-transform hover:scale-[1.02]">
               <div className="h-3 bg-primary-500"></div>
               <div className="p-6">
@@ -117,6 +118,23 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
                   className="inline-flex items-center text-primary-600 dark:text-primary-400 hover:underline"
                 >
                   开始设计
+                  <FontAwesomeIcon icon={faArrowRight} className="ml-1 text-sm" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-transform hover:scale-[1.02]">
+              <div className="h-3 bg-blue-500"></div>
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-3">视觉逻辑模型图</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  将逻辑模型可视化为直观的图形表示，展示字段关系和结构，便于理解和共享。
+                </p>
+                <button
+                  onClick={() => handleNavigate('visual-models')}
+                  className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  查看图表
                   <FontAwesomeIcon icon={faArrowRight} className="ml-1 text-sm" />
                 </button>
               </div>

@@ -7,7 +7,8 @@ import {
   faHome, 
   faDiagramProject, 
   faFileImport, 
-  faCodeBranch
+  faCodeBranch,
+  faImage
 } from '@fortawesome/free-solid-svg-icons';
 import { useAppStore } from '../store';
 
@@ -92,6 +93,15 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                   >
                     <FontAwesomeIcon icon={faDiagramProject} className="w-5 h-5 mr-3" />
                     <span>逻辑模型设计</span>
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="#visual-models" 
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faImage} className="w-5 h-5 mr-3" />
+                    <span>视觉逻辑模型图</span>
                   </a>
                 </li>
                 <li>
