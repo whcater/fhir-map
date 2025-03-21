@@ -1,0 +1,117 @@
+{
+  "id": "med-0012345",
+  "name": "格列美脲片",
+  "brandName": "亚莫利",
+  "genericName": "格列美脲",
+  "manufacturerInfo": {
+    "name": "赛诺菲(杭州)制药有限公司",
+    "id": "manufacturer-123",
+    "address": "浙江省杭州市经济技术开发区",
+    "contact": {
+      "phone": "400-820-8878",
+      "email": "info@sanofi.com.cn"
+    }
+  },
+  "dosageForm": "片剂",
+  "strength": {
+    "value": 2,
+    "unit": "mg"
+  },
+  "packagingInfo": {
+    "packageType": "瓶装",
+    "quantity": 30,
+    "unitPerPackage": "片"
+  },
+  "activeIngredients": [
+    {
+      "name": "格列美脲",
+      "quantity": {
+        "value": 2,
+        "unit": "mg"
+      }
+    }
+  ],
+  "therapeuticCategory": ["降血糖药", "磺酰脲类"],
+  "atcCode": "A10BB12",
+  "indications": [
+    "2型糖尿病", 
+    "成人糖尿病"
+  ],
+  "contraindications": [
+    "对格列美脲或其他磺酰脲类药物过敏",
+    "1型糖尿病",
+    "糖尿病酮症酸中毒"
+  ],
+  "sideEffects": [
+    {
+      "effect": "低血糖",
+      "severity": "中度",
+      "frequencyPercentage": 5.2
+    },
+    {
+      "effect": "胃部不适",
+      "severity": "轻度",
+      "frequencyPercentage": 3.1
+    },
+    {
+      "effect": "头晕",
+      "severity": "轻度",
+      "frequencyPercentage": 2.3
+    }
+  ],
+  "dosageInstructions": {
+    "initialDose": {
+      "value": 1,
+      "unit": "mg",
+      "frequency": "每日一次"
+    },
+    "maintenanceDose": {
+      "value": 1,
+      "unit": "mg",
+      "frequency": "每日一次",
+      "adjustmentInfo": "根据血糖水平，可调整至每日1-4mg"
+    },
+    "maxDailyDose": {
+      "value": 6,
+      "unit": "mg"
+    },
+    "administrationRoute": "口服",
+    "administrationTiming": "早餐前或早餐时服用"
+  },
+  "storageConditions": {
+    "temperature": {
+      "min": 15,
+      "max": 30,
+      "unit": "摄氏度"
+    },
+    "protectFromLight": true,
+    "protectFromMoisture": true,
+    "specialInstructions": "密闭保存，置于儿童不易接触处"
+  },
+  "expirationInfo": {
+    "shelfLife": {
+      "value": 36,
+      "unit": "月"
+    }
+  },
+  "regulatoryInfo": {
+    "approvalNumber": "国药准字H20030114",
+    "approvalDate": "2003-01-10",
+    "lastReviewDate": "2018-03-22",
+    "prescriptionStatus": "处方药"
+  },
+  "drugInteractions": [
+    {
+      "drug": "β-受体阻滞剂",
+      "effect": "可能掩盖低血糖症状",
+      "severity": "中度"
+    },
+    {
+      "drug": "肝脏代谢酶诱导剂",
+      "effect": "可能降低格列美脲疗效",
+      "severity": "中度"
+    }
+  ],
+  "isActive": true,
+  "lastUpdated": "2023-05-18T10:45:30"
+} 

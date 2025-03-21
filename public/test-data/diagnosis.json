@@ -1,0 +1,246 @@
+{
+  "id": "diag-20230915-001",
+  "patientInfo": {
+    "patientId": "patient-001",
+    "name": "张三",
+    "gender": "male",
+    "age": 38,
+    "idNumber": "110101198505150011"
+  },
+  "visitInfo": {
+    "visitId": "visit-20230915-001",
+    "visitType": "门诊",
+    "departmentName": "内科",
+    "departmentId": "dept-001",
+    "registrationTime": "2023-09-15T08:30:00",
+    "visitTime": "2023-09-15T09:15:00"
+  },
+  "physicianInfo": {
+    "physicianId": "doc-001",
+    "name": "李医生",
+    "title": "主任医师",
+    "department": "内科"
+  },
+  "chiefComplaint": {
+    "description": "间断头痛2周，伴有恶心、呕吐",
+    "durationDays": 14
+  },
+  "presentIllness": {
+    "description": "患者2周前无明显诱因出现头痛，疼痛位于额部，为持续性胀痛，疼痛程度中等，伴有恶心、呕吐症状，尤其在清晨较为明显。疼痛可被止痛药缓解，但停药后再次出现。患者近期工作压力大，睡眠质量差。",
+    "symptoms": [
+      {
+        "name": "头痛",
+        "site": "额部",
+        "nature": "胀痛",
+        "severity": "中度",
+        "durationDays": 14
+      },
+      {
+        "name": "恶心",
+        "severity": "轻度",
+        "timing": "晨间为主"
+      },
+      {
+        "name": "呕吐",
+        "frequency": "偶尔",
+        "timing": "晨间为主"
+      },
+      {
+        "name": "睡眠差",
+        "durationDays": 20
+      }
+    ],
+    "aggravatingFactors": ["工作压力大", "疲劳", "饮酒"],
+    "relievingFactors": ["休息", "止痛药"]
+  },
+  "pastHistory": {
+    "diseases": [
+      {
+        "name": "高血压",
+        "diagnosedYear": 2018,
+        "status": "持续治疗中"
+      },
+      {
+        "name": "糖尿病",
+        "diagnosedYear": 2020,
+        "status": "持续治疗中"
+      }
+    ],
+    "surgeries": [],
+    "allergies": ["青霉素", "花粉"],
+    "medications": [
+      {
+        "name": "格列美脲",
+        "dosage": "2mg",
+        "frequency": "每日一次",
+        "duration": "3年"
+      },
+      {
+        "name": "厄贝沙坦",
+        "dosage": "150mg",
+        "frequency": "每日一次",
+        "duration": "5年"
+      }
+    ]
+  },
+  "familyHistory": [
+    {
+      "relationship": "父亲",
+      "disease": "高血压",
+      "age": 65
+    },
+    {
+      "relationship": "母亲",
+      "disease": "2型糖尿病",
+      "age": 60
+    }
+  ],
+  "personalHistory": {
+    "smoking": {
+      "status": "已戒烟",
+      "packYears": 5,
+      "quitYear": 2018
+    },
+    "drinking": {
+      "status": "偶尔",
+      "frequency": "每周1-2次",
+      "amount": "啤酒1-2瓶"
+    },
+    "diet": "规律，近期夜宵增多",
+    "exercise": "每周2-3次，每次30分钟",
+    "occupation": "软件工程师",
+    "stress": "工作压力大"
+  },
+  "physicalExamination": {
+    "vitalSigns": {
+      "temperature": {
+        "value": 36.5,
+        "unit": "°C"
+      },
+      "heartRate": {
+        "value": 78,
+        "unit": "次/分"
+      },
+      "respiratoryRate": {
+        "value": 18,
+        "unit": "次/分"
+      },
+      "bloodPressure": {
+        "systolic": 145,
+        "diastolic": 90,
+        "unit": "mmHg"
+      }
+    },
+    "generalAppearance": "神清，精神状态一般",
+    "neurologicalExam": {
+      "consciousness": "清醒",
+      "orientation": "正常",
+      "reflexes": "正常",
+      "cranialNerves": "无异常",
+      "motorFunction": "正常",
+      "sensoryFunction": "正常"
+    }
+  },
+  "laboratoryExams": [
+    {
+      "name": "血常规",
+      "date": "2023-09-15",
+      "results": [
+        {
+          "name": "白细胞计数",
+          "value": 6.5,
+          "unit": "×10^9/L",
+          "referenceRange": "4.0-10.0",
+          "isAbnormal": false
+        },
+        {
+          "name": "血红蛋白",
+          "value": 150,
+          "unit": "g/L",
+          "referenceRange": "120-160",
+          "isAbnormal": false
+        }
+      ]
+    },
+    {
+      "name": "血糖",
+      "date": "2023-09-15",
+      "results": [
+        {
+          "name": "空腹血糖",
+          "value": 7.2,
+          "unit": "mmol/L",
+          "referenceRange": "3.9-6.1",
+          "isAbnormal": true
+        }
+      ]
+    }
+  ],
+  "imagingExams": [
+    {
+      "name": "头颅CT",
+      "date": "2023-09-15",
+      "results": "未见明显异常",
+      "conclusions": "正常头颅CT表现"
+    }
+  ],
+  "diagnosis": {
+    "primary": {
+      "name": "紧张性头痛",
+      "icd10": "G44.2",
+      "certainty": "高度可能"
+    },
+    "secondary": [
+      {
+        "name": "高血压",
+        "icd10": "I10",
+        "certainty": "确诊"
+      },
+      {
+        "name": "2型糖尿病",
+        "icd10": "E11",
+        "certainty": "确诊"
+      }
+    ]
+  },
+  "treatment": {
+    "medications": [
+      {
+        "name": "布洛芬",
+        "specification": "0.2g/片",
+        "dosage": "0.4g",
+        "frequency": "必要时",
+        "route": "口服",
+        "duration": "7天"
+      },
+      {
+        "name": "氟桂利嗪",
+        "specification": "5mg/片",
+        "dosage": "5mg",
+        "frequency": "每日一次",
+        "route": "口服",
+        "duration": "14天"
+      }
+    ],
+    "nonPharmacological": [
+      "保证充足睡眠",
+      "避免过度劳累",
+      "缓解工作压力",
+      "规律作息"
+    ],
+    "recommendations": "建议复查空腹血糖和血压，必要时调整降压药和降糖药"
+  },
+  "prognosis": {
+    "expectedOutcome": "良好",
+    "followUpPlan": {
+      "scheduledDate": "2023-09-29",
+      "focus": "头痛症状改善情况，血压和血糖控制情况"
+    }
+  },
+  "diagnosisDate": "2023-09-15T10:30:00",
+  "recordedBy": {
+    "id": "doc-001",
+    "name": "李医生"
+  },
+  "lastUpdated": "2023-09-15T11:15:00"
+} 

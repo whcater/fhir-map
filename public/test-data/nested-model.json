@@ -1,0 +1,386 @@
+{
+  "medicalRecord": {
+    "recordId": "MR-202404001",
+    "recordType": "住院病历",
+    "institution": {
+      "id": "HOSP-001",
+      "name": "协和医院",
+      "address": {
+        "province": "北京市",
+        "city": "北京市",
+        "district": "东城区",
+        "street": "东单三条",
+        "postalCode": "100730"
+      },
+      "contact": {
+        "phone": "010-12345678",
+        "email": "info@pumch.cn"
+      }
+    },
+    "patient": {
+      "id": "P-20240401",
+      "name": {
+        "firstName": "李",
+        "lastName": "明",
+        "fullName": "李明"
+      },
+      "birthDate": "1980-04-15",
+      "gender": "male",
+      "idType": "身份证",
+      "idNumber": "110101198004150011",
+      "insurance": [
+        {
+          "type": "城镇职工医保",
+          "id": "INSUR-001",
+          "validityPeriod": {
+            "start": "2023-01-01",
+            "end": "2023-12-31"
+          }
+        },
+        {
+          "type": "商业保险",
+          "id": "COMM-INS-002",
+          "provider": "某保险公司",
+          "validityPeriod": {
+            "start": "2023-01-01",
+            "end": "2025-12-31"
+          }
+        }
+      ],
+      "contact": {
+        "phone": "13900001111",
+        "email": "liming@example.com",
+        "address": {
+          "province": "北京市",
+          "city": "北京市",
+          "district": "海淀区",
+          "detail": "某小区1号楼2单元303"
+        }
+      },
+      "emergencyContact": {
+        "name": "李小明",
+        "relationship": "子女",
+        "phone": "13800002222"
+      }
+    },
+    "admissionInfo": {
+      "admissionDate": "2024-04-01T10:30:00",
+      "admissionType": "计划入院",
+      "admittingDiagnosis": [
+        {
+          "name": "冠状动脉粥样硬化性心脏病",
+          "icd10": "I25.1"
+        },
+        {
+          "name": "高血压",
+          "icd10": "I10"
+        }
+      ],
+      "department": {
+        "id": "DEPT-001",
+        "name": "心内科"
+      },
+      "ward": {
+        "id": "WARD-A",
+        "name": "A病区",
+        "roomNumber": "A-205",
+        "bedNumber": "2"
+      },
+      "attendingPhysician": {
+        "id": "DOC-001",
+        "name": "张医生",
+        "title": "主任医师"
+      }
+    },
+    "presentIllness": {
+      "mainComplaints": ["胸闷", "气促", "活动后加重"],
+      "onset": {
+        "date": "2024-03-20",
+        "mode": "缓慢加重",
+        "trigger": "体力活动"
+      },
+      "courseOfIllness": "患者于2024年3月20日出现活动后胸闷、气促，休息后可缓解，近一周来症状加重，劳累后出现憋气，夜间平卧时加重。",
+      "symptoms": [
+        {
+          "name": "胸闷",
+          "severity": "中度",
+          "onset": "2024-03-20",
+          "duration": "12天",
+          "frequency": "每日多次",
+          "aggravatingFactors": ["劳累", "平卧"],
+          "relievingFactors": ["休息", "坐位"]
+        },
+        {
+          "name": "气促",
+          "severity": "中度",
+          "onset": "2024-03-20",
+          "duration": "12天",
+          "frequency": "劳累时出现",
+          "aggravatingFactors": ["活动", "夜间"],
+          "relievingFactors": ["休息"]
+        }
+      ]
+    },
+    "pastMedicalHistory": {
+      "diseases": [
+        {
+          "name": "高血压",
+          "onsetYear": 2015,
+          "currentStatus": "控制中",
+          "treatments": [
+            {
+              "medication": "氨氯地平",
+              "dosage": "5mg",
+              "frequency": "每日一次"
+            }
+          ]
+        },
+        {
+          "name": "2型糖尿病",
+          "onsetYear": 2018,
+          "currentStatus": "控制中",
+          "treatments": [
+            {
+              "medication": "二甲双胍",
+              "dosage": "500mg",
+              "frequency": "每日两次"
+            }
+          ]
+        }
+      ],
+      "surgeries": [
+        {
+          "name": "阑尾切除术",
+          "year": 2000,
+          "hospital": "某医院"
+        }
+      ],
+      "allergies": [
+        {
+          "allergen": "青霉素",
+          "reaction": "皮疹",
+          "severity": "中度"
+        }
+      ],
+      "familyHistory": [
+        {
+          "relationship": "父亲",
+          "condition": "冠心病",
+          "age": 65
+        },
+        {
+          "relationship": "母亲",
+          "condition": "高血压",
+          "age": 70
+        }
+      ]
+    },
+    "physicalExamination": {
+      "vitalSigns": {
+        "temperature": {
+          "value": 36.5,
+          "unit": "°C"
+        },
+        "bloodPressure": {
+          "systolic": 150,
+          "diastolic": 90,
+          "unit": "mmHg"
+        },
+        "heartRate": {
+          "value": 88,
+          "unit": "次/分"
+        },
+        "respiratoryRate": {
+          "value": 20,
+          "unit": "次/分"
+        },
+        "oxygenSaturation": {
+          "value": 96,
+          "unit": "%"
+        }
+      },
+      "generalAppearance": "神清，精神状态一般",
+      "systems": [
+        {
+          "system": "心血管系统",
+          "findings": [
+            {
+              "site": "心前区",
+              "description": "心律规则，心率88次/分，心音低钝，无明显杂音"
+            }
+          ]
+        },
+        {
+          "system": "呼吸系统",
+          "findings": [
+            {
+              "site": "双肺",
+              "description": "呼吸音粗，双下肺可闻及少量湿性啰音"
+            }
+          ]
+        }
+      ]
+    },
+    "laboratory": {
+      "bloodTests": [
+        {
+          "name": "血常规",
+          "date": "2024-04-01",
+          "results": [
+            {
+              "name": "白细胞计数",
+              "value": 6.8,
+              "unit": "×10^9/L",
+              "referenceRange": "4.0-10.0",
+              "interpretation": "正常"
+            },
+            {
+              "name": "血红蛋白",
+              "value": 130,
+              "unit": "g/L",
+              "referenceRange": "120-160",
+              "interpretation": "正常"
+            }
+          ]
+        },
+        {
+          "name": "心肌酶谱",
+          "date": "2024-04-01",
+          "results": [
+            {
+              "name": "肌钙蛋白I",
+              "value": 0.05,
+              "unit": "ng/mL",
+              "referenceRange": "<0.03",
+              "interpretation": "轻度升高"
+            },
+            {
+              "name": "肌酸激酶同工酶",
+              "value": 25,
+              "unit": "U/L",
+              "referenceRange": "<24",
+              "interpretation": "轻度升高"
+            }
+          ]
+        }
+      ],
+      "imagingStudies": [
+        {
+          "name": "胸部X线",
+          "date": "2024-04-01",
+          "findings": "心影增大，肺纹理增粗",
+          "conclusion": "心脏扩大，轻度肺淤血"
+        },
+        {
+          "name": "心电图",
+          "date": "2024-04-01",
+          "findings": "窦性心律，ST段水平型压低0.05-0.1mV(II, III, avF, V4-V6)",
+          "conclusion": "符合心肌缺血改变"
+        }
+      ]
+    },
+    "diagnoses": {
+      "principal": {
+        "name": "冠状动脉粥样硬化性心脏病",
+        "icd10": "I25.1"
+      },
+      "secondary": [
+        {
+          "name": "心功能不全(NYHA II级)",
+          "icd10": "I50.9"
+        },
+        {
+          "name": "高血压 3级 很高危",
+          "icd10": "I10"
+        },
+        {
+          "name": "2型糖尿病",
+          "icd10": "E11"
+        }
+      ]
+    },
+    "treatments": {
+      "medications": [
+        {
+          "name": "阿司匹林",
+          "specification": "100mg/片",
+          "dosage": "100mg",
+          "route": "口服",
+          "frequency": "每日一次",
+          "duration": "长期"
+        },
+        {
+          "name": "硝酸甘油",
+          "specification": "0.5mg/片",
+          "dosage": "0.5mg",
+          "route": "舌下含服",
+          "frequency": "发作时",
+          "duration": "需要时"
+        },
+        {
+          "name": "倍他乐克",
+          "specification": "25mg/片",
+          "dosage": "25mg",
+          "route": "口服",
+          "frequency": "每日两次",
+          "duration": "长期"
+        }
+      ],
+      "procedures": [
+        {
+          "name": "冠状动脉造影",
+          "scheduledDate": "2024-04-03",
+          "reason": "明确冠脉病变情况",
+          "preparation": [
+            "术前禁食6小时",
+            "检查凝血功能",
+            "术前准备剃须"
+          ]
+        }
+      ],
+      "nurseCare": [
+        {
+          "type": "体位护理",
+          "description": "保持半卧位，避免平卧"
+        },
+        {
+          "type": "饮食护理",
+          "description": "低盐低脂饮食，少量多餐"
+        }
+      ]
+    },
+    "progressNotes": [
+      {
+        "date": "2024-04-02T08:30:00",
+        "author": {
+          "id": "DOC-001",
+          "name": "张医生"
+        },
+        "content": "患者昨晚休息尚可，今晨无明显不适，生命体征平稳。查体：心率85次/分，律齐，双肺呼吸音粗，未闻及明显干湿性啰音。治疗方案维持不变，今日安排完善相关检查。",
+        "vitalSigns": {
+          "temperature": 36.5,
+          "bloodPressure": "145/85",
+          "heartRate": 85,
+          "respiratoryRate": 18,
+          "oxygenSaturation": 97
+        }
+      }
+    ],
+    "dischargeSummary": {
+      "dischargeDate": null,
+      "dischargeDiagnoses": [],
+      "followUp": {
+        "recommended": true,
+        "timing": "出院后1周",
+        "department": "心内科门诊",
+        "instructions": "复查心电图、心肌酶谱"
+      }
+    },
+    "metadata": {
+      "createdAt": "2024-04-01T11:30:00",
+      "updatedAt": "2024-04-02T09:15:00",
+      "recordStatus": "活跃",
+      "version": "1.2"
+    }
+  }
+} 

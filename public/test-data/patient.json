@@ -1,0 +1,66 @@
+{
+  "id": "patient-001",
+  "name": {
+    "firstName": "张",
+    "lastName": "三",
+    "fullName": "张三"
+  },
+  "gender": "male",
+  "birthDate": "1985-05-15",
+  "contact": {
+    "phone": "13800138000",
+    "email": "zhangsan@example.com",
+    "address": {
+      "province": "北京市",
+      "city": "北京市",
+      "district": "海淀区",
+      "street": "中关村大街1号",
+      "postalCode": "100000"
+    }
+  },
+  "insuranceInfo": {
+    "insuranceId": "INS-123456",
+    "provider": "国家医保",
+    "expirationDate": "2025-12-31"
+  },
+  "medicalHistory": [
+    {
+      "condition": "高血压",
+      "diagnosedDate": "2018-03-22",
+      "treatment": "药物治疗",
+      "status": "持续治疗中"
+    },
+    {
+      "condition": "糖尿病",
+      "diagnosedDate": "2020-07-15",
+      "treatment": "饮食控制和药物治疗",
+      "status": "持续治疗中"
+    }
+  ],
+  "allergies": ["青霉素", "花粉"],
+  "emergencyContacts": [
+    {
+      "name": "张四",
+      "relationship": "兄弟",
+      "phone": "13900139000"
+    }
+  ],
+  "lastVisit": {
+    "date": "2023-08-10T09:30:00",
+    "department": "内科",
+    "doctor": "李医生",
+    "reason": "定期随访"
+  },
+  "vitalSigns": {
+    "height": 175,
+    "weight": 70.5,
+    "bloodPressure": {
+      "systolic": 130,
+      "diastolic": 85
+    },
+    "heartRate": 75,
+    "temperature": 36.5
+  },
+  "isActive": true,
+  "registrationDate": "2015-06-18T14:25:43"
+} 
