@@ -87,153 +87,132 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   const formatFieldType = (type: FieldType): string => {
     switch (type) {
       case FieldType.STRING:
-        return '文本';
+        return 'String';
       case FieldType.NUMBER:
-        return '数值';
+        return 'Number';
       case FieldType.BOOLEAN:
-        return '布尔';
+        return 'Boolean';
       case FieldType.DATE:
-        return '日期';
+        return 'Date';
       case FieldType.DATETIME:
-        return '日期时间';
+        return 'DateTime';
       case FieldType.OBJECT:
-        return '对象';
+        return 'Object';
       case FieldType.ARRAY:
-        return '数组';
+        return 'Array';
       default:
         return type;
     }
   };
 
-  // 生成Mermaid类图定义
+  // 生成ER图定义（替代类图）
   const generateMermaidDefinition = (): string => {
-    // 检查模型字段是否存在
-    if (!model.fields || model.fields.length === 0) {
+    try {
+      // 使用ER图而不是类图，ER图对语法要求更宽松
+      let diagram = `erDiagram\n`;
+      
+      // 创建主实体
       const safeModelName = model.name.replace(/[^a-zA-Z0-9_]/g, '_');
-      return `classDiagram
-  class "${safeModelName}" {
-    (无字段)
-  }
-`;
-    }
-    
-    // 构建类图定义 - 确保使用多行字符串而不是拼接
-    let definition = `classDiagram
-
-`;
-    
-    // 安全处理模型名称
-    const safeModelName = model.name.replace(/[^a-zA-Z0-9_]/g, '_');
-    
-    // 添加主类
-    definition += `  class "${safeModelName}" {
-`;
-    
-    // 根级字段
-    const rootFields = model.fields.filter(field => !field.parentId);
-    
-    if (rootFields.length === 0) {
-      definition += `    (无根级字段)
-`;
-    } else {
-      rootFields.forEach(field => {
-        // 安全检查字段名称
-        const fieldName = field.name ? field.name.replace(/["\s]/g, '_') : '未命名字段';
-        const requiredMark = field.isRequired ? '*' : '';
-        definition += `    ${fieldName}${requiredMark}: ${formatFieldType(field.type)}
-`;
-      });
-    }
-    
-    definition += `  }
-`;
-    
-    // 处理对象和数组类型的字段
-    const objectFields = model.fields.filter(field => 
-      (field.type === FieldType.OBJECT || field.type === FieldType.ARRAY) && !field.parentId
-    );
-    
-    objectFields.forEach(objField => {
-      // 为每个对象/数组字段创建子类
-      try {
-        definition += createSubClassDefinition(objField, model.fields, safeModelName);
-      } catch (subclassError) {
-        console.error(`创建子类定义时出错 (${objField.name}):`, subclassError);
-        // 添加错误注释而不是抛出异常
-        definition += `  %% 创建子类 "${objField.name}" 时出错: ${subclassError instanceof Error ? subclassError.message : String(subclassError)}
-`;
+      
+      diagram += `    ${safeModelName} {\n`;
+      
+      // 添加字段
+      if (!model.fields || model.fields.length === 0) {
+        diagram += `        string none "无字段"\n`;
+      } else {
+        // 只处理根级字段
+        const rootFields = model.fields.filter(f => !f.parentId);
+        
+        if (rootFields.length === 0) {
+          diagram += `        string none "无根级字段"\n`;
+        } else {
+          rootFields.forEach(field => {
+            const fieldName = field.name.replace(/[^a-zA-Z0-9_]/g, '_');
+            const fieldType = formatFieldType(field.type).toLowerCase();
+            const required = field.isRequired ? "必填" : "可选";
+            diagram += `        ${fieldType} ${fieldName} "${required}"\n`;
+          });
+        }
       }
-    });
-    
-    // 输出一下生成的定义，便于调试
-    console.log("生成的Mermaid定义:", definition);
-    
-    return definition;
-  };
-  
-  // 递归创建子类的类图定义
-  const createSubClassDefinition = (
-    parentField: FieldMetadata, 
-    allFields: FieldMetadata[], 
-    parentClassName: string
-  ): string => {
-    // 确保字段名称和类名安全有效
-    const safeParentName = parentField.name ? parentField.name.replace(/["\s]/g, '_') : '未命名字段';
-    
-    // 确保类名不包含特殊字符
-    const safeClassName = `${parentClassName}_${safeParentName}`.replace(/[^a-zA-Z0-9_]/g, '_');
-    
-    let definition = `  class "${safeClassName}" {
-`;
-    
-    // 添加子字段
-    const childFields = allFields.filter(field => field.parentId === parentField.id);
-    
-    if (childFields.length === 0) {
-      definition += `    (无子字段)
-`;
-    } else {
-      childFields.forEach(field => {
-        // 确保字段名称安全有效
-        const fieldName = field.name ? field.name.replace(/["\s]/g, '_') : '未命名字段';
-        const requiredMark = field.isRequired ? '*' : '';
-        definition += `    ${fieldName}${requiredMark}: ${formatFieldType(field.type)}
-`;
+      
+      diagram += `    }\n`;
+      
+      // 处理子实体
+      const entities = new Map<string, FieldMetadata>();
+      const relationships: string[] = [];
+      
+      // 递归构建实体和关系
+      const processEntity = (
+        field: FieldMetadata, 
+        parentId: string | null = null, 
+        parentEntityName: string = safeModelName
+      ) => {
+        // 只处理对象和数组类型
+        if (field.type !== FieldType.OBJECT && field.type !== FieldType.ARRAY) {
+          return;
+        }
+        
+        // 创建实体名称
+        const fieldName = field.name.replace(/[^a-zA-Z0-9_]/g, '_');
+        const entityName = `${parentEntityName}_${fieldName}`;
+        
+        // 存储实体
+        entities.set(entityName, field);
+        
+        // 创建关系
+        const cardinality = field.type === FieldType.ARRAY ? "||--o{" : "||--o|";
+        relationships.push(`    ${parentEntityName} ${cardinality} ${entityName} : "${field.name.substring(0, 15)}"`);
+        
+        // 递归处理子字段
+        const childFields = model.fields.filter(f => f.parentId === field.id);
+        childFields
+          .filter(f => f.type === FieldType.OBJECT || f.type === FieldType.ARRAY)
+          .forEach(childField => {
+            processEntity(childField, field.id, entityName);
+          });
+      };
+      
+      // 处理所有根级对象和数组字段
+      model.fields
+        .filter(f => !f.parentId && (f.type === FieldType.OBJECT || f.type === FieldType.ARRAY))
+        .forEach(field => {
+          processEntity(field);
+        });
+      
+      // 添加所有实体
+      entities.forEach((field, entityName) => {
+        diagram += `    ${entityName} {\n`;
+        
+        // 添加子字段
+        const childFields = model.fields.filter(f => f.parentId === field.id);
+        
+        if (childFields.length === 0) {
+          diagram += `        string none "无子字段"\n`;
+        } else {
+          childFields
+            .filter(f => f.type !== FieldType.OBJECT && f.type !== FieldType.ARRAY)
+            .forEach(childField => {
+              const fieldName = childField.name.replace(/[^a-zA-Z0-9_]/g, '_');
+              const fieldType = formatFieldType(childField.type).toLowerCase();
+              const required = childField.isRequired ? "必填" : "可选";
+              diagram += `        ${fieldType} ${fieldName} "${required}"\n`;
+            });
+        }
+        
+        diagram += `    }\n`;
       });
+      
+      // 添加所有关系
+      relationships.forEach(rel => {
+        diagram += rel + '\n';
+      });
+      
+      console.log("生成的Mermaid ER图定义:", diagram);
+      return diagram;
+    } catch (error) {
+      console.error("生成Mermaid定义出错:", error);
+      return `erDiagram\n    Model { string error "生成图表错误" }\n`;
     }
-    
-    definition += `  }
-`;
-    
-    // 添加关系连接
-    if (parentField.type === FieldType.ARRAY) {
-      // 避免长字段名，可能导致图表变形
-      const shortName = safeParentName.length > 15 ? safeParentName.substring(0, 15) + '...' : safeParentName;
-      definition += `  "${parentClassName}" "1" --o "*" "${safeClassName}" : ${shortName}
-`;
-    } else {
-      const shortName = safeParentName.length > 15 ? safeParentName.substring(0, 15) + '...' : safeParentName;
-      definition += `  "${parentClassName}" "1" --o "1" "${safeClassName}" : ${shortName}
-`;
-    }
-    
-    // 递归处理子对象/数组字段
-    const nestedObjectFields = childFields.filter(field => 
-      field.type === FieldType.OBJECT || field.type === FieldType.ARRAY
-    );
-    
-    nestedObjectFields.forEach(objField => {
-      try {
-        definition += createSubClassDefinition(objField, allFields, safeClassName);
-      } catch (nestedError) {
-        console.error(`创建嵌套子类定义时出错 (${objField.name}):`, nestedError);
-        // 添加错误注释而不是抛出异常
-        definition += `  %% 创建嵌套子类 "${objField.name}" 时出错: ${nestedError instanceof Error ? nestedError.message : String(nestedError)}
-`;
-      }
-    });
-    
-    return definition;
   };
 
   // 渲染图表
@@ -265,11 +244,11 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       }
       
       containerRef.current.innerHTML = `
-        <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
-          <p class="font-semibold mb-2">渲染视觉模型图时出错</p>
-          <pre class="text-xs overflow-auto max-h-32">${errorMessage}</pre>
-        </div>
-      `;
+          <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
+            <p class="font-semibold mb-2">渲染视觉模型图时出错</p>
+            <pre class="text-xs overflow-auto max-h-32">${errorMessage}</pre>
+          </div>
+        `;
     }
   };
 
@@ -321,4 +300,4 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   );
 };
 
-export default VisualModelGraph; 
+export default VisualModelGraph;
