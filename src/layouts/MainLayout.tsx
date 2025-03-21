@@ -39,6 +39,11 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     }
   };
 
+  // 导航处理
+  const handleNavigate = (path: string) => {
+    window.location.hash = path;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* 顶部导航栏 */}
@@ -72,25 +77,37 @@ const MainLayout = ({ children }: MainLayoutProps) => {
             <nav>
               <ul className="space-y-2">
                 <li>
-                  <a href="/" className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <a 
+                    href="#home" 
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
                     <FontAwesomeIcon icon={faHome} className="w-5 h-5 mr-3" />
                     <span>首页</span>
                   </a>
                 </li>
                 <li>
-                  <a href="/logic-models" className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <a 
+                    href="#logic-models" 
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
                     <FontAwesomeIcon icon={faDiagramProject} className="w-5 h-5 mr-3" />
                     <span>逻辑模型设计</span>
                   </a>
                 </li>
                 <li>
-                  <a href="/third-party-models" className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <a 
+                    href="#third-party-models" 
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
                     <FontAwesomeIcon icon={faFileImport} className="w-5 h-5 mr-3" />
                     <span>第三方数据模型</span>
                   </a>
                 </li>
                 <li>
-                  <a href="/mapping" className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                  <a 
+                    href="#mapping" 
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
                     <FontAwesomeIcon icon={faCodeBranch} className="w-5 h-5 mr-3" />
                     <span>映射配置</span>
                   </a>

@@ -8,9 +8,19 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
+import { Dispatch, SetStateAction } from 'react';
 
-const HomePage = () => {
+interface HomePageProps {
+  onNavigate: Dispatch<SetStateAction<string>>;
+}
+
+const HomePage = ({ onNavigate }: HomePageProps) => {
   const { domains, logicDtoModels, thirdPartyModels, mappingConfigurations } = useAppStore();
+
+  const handleNavigate = (path: string) => {
+    window.location.hash = path;
+    onNavigate(path);
+  };
 
   return (
     <MainLayout>
@@ -23,19 +33,19 @@ const HomePage = () => {
               设计标准逻辑模型，将FHIR资源与第三方数据格式进行映射，以实现无缝数据转换和互操作性。
             </p>
             <div className="flex flex-wrap gap-4">
-              <a 
-                href="/logic-models" 
+              <button 
+                onClick={() => handleNavigate('logic-models')}
                 className="inline-flex items-center px-4 py-2 bg-white text-primary-600 rounded-md shadow hover:bg-primary-50 transition-colors"
               >
                 开始设计
                 <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
-              </a>
-              <a 
-                href="/documents" 
+              </button>
+              <button 
+                onClick={() => handleNavigate('documents')}
                 className="inline-flex items-center px-4 py-2 border border-white text-white rounded-md hover:bg-white/10 transition-colors"
               >
                 查看文档
-              </a>
+              </button>
             </div>
           </div>
         </section>
@@ -102,13 +112,13 @@ const HomePage = () => {
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   设计标准化的逻辑数据模型(LogicDto)，作为第三方数据与FHIR格式之间的中间层。
                 </p>
-                <a
-                  href="/logic-models"
+                <button
+                  onClick={() => handleNavigate('logic-models')}
                   className="inline-flex items-center text-primary-600 dark:text-primary-400 hover:underline"
                 >
                   开始设计
                   <FontAwesomeIcon icon={faArrowRight} className="ml-1 text-sm" />
-                </a>
+                </button>
               </div>
             </div>
             
@@ -119,13 +129,13 @@ const HomePage = () => {
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   定义第三方数据模型结构，支持从JSON或XML自动生成，处理一对一或一对多的子对象关系。
                 </p>
-                <a
-                  href="/third-party-models"
+                <button
+                  onClick={() => handleNavigate('third-party-models')}
                   className="inline-flex items-center text-green-600 dark:text-green-400 hover:underline"
                 >
                   开始定义
                   <FontAwesomeIcon icon={faArrowRight} className="ml-1 text-sm" />
-                </a>
+                </button>
               </div>
             </div>
             
@@ -136,13 +146,13 @@ const HomePage = () => {
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   配置数据映射关系，支持第三方数据、逻辑模型和FHIR格式之间的双向映射。
                 </p>
-                <a
-                  href="/mapping"
+                <button
+                  onClick={() => handleNavigate('mapping')}
                   className="inline-flex items-center text-purple-600 dark:text-purple-400 hover:underline"
                 >
                   开始配置
                   <FontAwesomeIcon icon={faArrowRight} className="ml-1 text-sm" />
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -160,12 +170,12 @@ const HomePage = () => {
                       <h3 className="font-semibold">{domain.name}</h3>
                       <p className="text-sm text-gray-500 dark:text-gray-400">{domain.description}</p>
                     </div>
-                    <a
-                      href={`/domains/${domain.id}`}
+                    <button
+                      onClick={() => handleNavigate(`domains/${domain.id}`)}
                       className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                     >
                       查看
-                    </a>
+                    </button>
                   </div>
                 </li>
               ))}
