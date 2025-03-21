@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 import { LogicDtoModel, FieldMetadata, FieldType } from '../types';
 
@@ -16,9 +16,22 @@ interface VisualModelGraphProps {
 
 export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme = 'light' }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const mermaidRef = useRef<HTMLDivElement | null>(null);
   const graphId = `graph-${model.id}`;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scale, setScale] = useState(100); // 缩放比例，默认100%
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+
+  // 保存渲染后的Mermaid DOM引用
+  const saveMermaidRef = useCallback(() => {
+    if (containerRef.current) {
+      mermaidRef.current = containerRef.current.querySelector('.mermaid') as HTMLDivElement;
+    }
+  }, []);
 
   useEffect(() => {
     // 配置Mermaid
@@ -106,6 +119,135 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     };
   }, []);
 
+  // 空格键和鼠标拖动功能
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat) {
+        setSpacePressed(true);
+        // 防止空格滚动页面
+        e.preventDefault();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // 鼠标拖动事件处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (spacePressed || e.button === 1) { // 按下空格键或鼠标中键
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      
+      setPosition(prev => ({
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+      
+      setDragStart({ x: e.clientX, y: e.clientY });
+      
+      // 应用变换
+      if (mermaidRef.current) {
+        mermaidRef.current.style.transform = `translate(${position.x + dx}px, ${position.y + dy}px) scale(${scale/100})`;
+      }
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 触摸事件处理
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      // 单指触摸开始拖动
+      setIsDragging(true);
+      setDragStart({ 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      });
+    } else if (e.touches.length === 2) {
+      // 双指缩放
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setLastTouchDistance(dist);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault(); // 防止页面滚动
+    
+    if (e.touches.length === 1 && isDragging) {
+      // 单指移动
+      const dx = e.touches[0].clientX - dragStart.x;
+      const dy = e.touches[0].clientY - dragStart.y;
+      
+      setPosition(prev => ({
+        x: prev.x + dx,
+        y: prev.y + dy
+      }));
+      
+      setDragStart({ 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      });
+      
+      // 应用变换
+      if (mermaidRef.current) {
+        mermaidRef.current.style.transform = `translate(${position.x + dx}px, ${position.y + dy}px) scale(${scale/100})`;
+      }
+    } else if (e.touches.length === 2) {
+      // 双指缩放
+      const currentDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      
+      if (lastTouchDistance > 0) {
+        const delta = currentDist - lastTouchDistance;
+        const newScale = Math.min(Math.max(scale + delta * 0.2, 60), 200);
+        setScale(newScale);
+        
+        // 应用变换
+        if (mermaidRef.current) {
+          mermaidRef.current.style.transform = `translate(${position.x}px, ${position.y}px) scale(${newScale/100})`;
+        }
+      }
+      
+      setLastTouchDistance(currentDist);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setLastTouchDistance(0);
+  };
+
+  // 双击切换全屏
+  const handleDoubleClick = () => {
+    toggleFullscreen();
+  };
+
   // 切换全屏
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -131,16 +273,22 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         : Math.max(prevScale - 20, 60);  // 减少至最小60%
       
       // 应用新的缩放比例
-      if (containerRef.current) {
-        const mermaidDiv = containerRef.current.querySelector('.mermaid');
-        if (mermaidDiv) {
-          (mermaidDiv as HTMLElement).style.transform = `scale(${newScale / 100})`;
-          (mermaidDiv as HTMLElement).style.transformOrigin = 'top left';
-        }
+      if (mermaidRef.current) {
+        mermaidRef.current.style.transform = `translate(${position.x}px, ${position.y}px) scale(${newScale/100})`;
       }
       
       return newScale;
     });
+  };
+
+  // 重置位置和缩放
+  const resetView = () => {
+    setPosition({ x: 0, y: 0 });
+    setScale(100);
+    
+    if (mermaidRef.current) {
+      mermaidRef.current.style.transform = 'translate(0px, 0px) scale(1)';
+    }
   };
 
   // 将字段类型转换为更易读的格式
@@ -281,12 +429,14 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     
     try {
       const definition = generateMermaidDefinition();
-      containerRef.current.innerHTML = `<div class="mermaid" style="transform: scale(${scale/100}); transform-origin: top left;">${definition}</div>`;
+      containerRef.current.innerHTML = `<div class="mermaid" style="transform: translate(${position.x}px, ${position.y}px) scale(${scale/100}); transform-origin: top left;">${definition}</div>`;
       
       // 使用try-catch包装mermaid.run以捕获特定错误
       try {
         // 解析和渲染图表
         await mermaid.run();
+        // 保存渲染后的引用
+        saveMermaidRef();
       } catch (mermaidError) {
         console.error('Mermaid渲染错误，尝试重试:', mermaidError);
         
@@ -296,6 +446,8 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
           setTimeout(async () => {
             try {
               await mermaid.run();
+              // 保存渲染后的引用
+              saveMermaidRef();
             } catch (retryError) {
               // 重试失败，显示错误信息
               displayError(retryError);
@@ -366,6 +518,15 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
               </svg>
             </button>
             <button
+              onClick={resetView}
+              className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+              title="重置视图"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <button
               onClick={toggleFullscreen}
               className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
               title={isFullscreen ? "退出全屏" : "全屏显示"}
@@ -395,11 +556,25 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
           ref={containerRef} 
           id={graphId}
           className={`w-full ${isFullscreen ? 'h-[calc(100%-40px)]' : 'overflow-x-auto'}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onDoubleClick={handleDoubleClick}
+          style={{ cursor: spacePressed ? 'grab' : 'default', touchAction: 'none' }}
         >
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
           </div>
         </div>
+        {spacePressed && (
+          <div className="fixed bottom-4 right-4 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-2 rounded shadow text-xs">
+            按住鼠标拖动图表
+          </div>
+        )}
       </div>
     </div>
   );
