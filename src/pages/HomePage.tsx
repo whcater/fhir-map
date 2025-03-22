@@ -165,7 +165,7 @@ const HomePage = ({ onNavigate }: HomePageProps) => {
                   配置数据映射关系，支持第三方数据、逻辑模型和FHIR格式之间的双向映射。
                 </p>
                 <button
-                  onClick={() => handleNavigate('mapping')}
+                  onClick={() => handleNavigate('mapping-config')}
                   className="inline-flex items-center text-purple-600 dark:text-purple-400 hover:underline"
                 >
                   开始配置

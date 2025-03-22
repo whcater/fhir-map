@@ -115,7 +115,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </li>
                 <li>
                   <a 
-                    href="#mapping" 
+                    href="#mapping-config" 
                     className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <FontAwesomeIcon icon={faCodeBranch} className="w-5 h-5 mr-3" />

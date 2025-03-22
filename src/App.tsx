@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import LogicModelPage from './pages/LogicModelPage'
 import VisualModelPage from './pages/VisualModelPage'
 import ThirdPartyModelPage from './pages/ThirdPartyModelPage'
+import MappingConfigPage from './pages/MappingConfigPage'
 import './index.css'
 
 function App() {
@@ -18,6 +19,8 @@ function App() {
         return <VisualModelPage />
       case 'third-party-models':
         return <ThirdPartyModelPage />
+      case 'mapping-config':
+        return <MappingConfigPage />
       default:
         return <HomePage onNavigate={setCurrentPage} />
     }

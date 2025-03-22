@@ -20,7 +20,132 @@
       "description": "患者诊断信息领域"
     }
   ],
-  "logicDtoModels": [],
+  "logicDtoModels": [
+    {
+      "id": "logic-model-patient",
+      "name": "患者基本信息模型",
+      "description": "包含患者的基本身份和人口统计学信息",
+      "domainId": "patient",
+      "fields": [
+        {
+          "id": "field-logic-1",
+          "name": "patientId",
+          "description": "患者唯一标识",
+          "type": "string",
+          "isRequired": true
+        },
+        {
+          "id": "field-logic-2",
+          "name": "name",
+          "description": "患者姓名",
+          "type": "object",
+          "isRequired": true
+        },
+        {
+          "id": "field-logic-3",
+          "name": "familyName",
+          "description": "姓",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-logic-2"
+        },
+        {
+          "id": "field-logic-4",
+          "name": "givenName",
+          "description": "名",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-logic-2"
+        },
+        {
+          "id": "field-logic-5",
+          "name": "gender",
+          "description": "性别",
+          "type": "string",
+          "isRequired": true
+        },
+        {
+          "id": "field-logic-6",
+          "name": "birthDate",
+          "description": "出生日期",
+          "type": "date",
+          "isRequired": true
+        },
+        {
+          "id": "field-logic-7",
+          "name": "contact",
+          "description": "联系方式",
+          "type": "array",
+          "isRequired": false
+        },
+        {
+          "id": "field-logic-8",
+          "name": "type",
+          "description": "联系方式类型",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-logic-7"
+        },
+        {
+          "id": "field-logic-9",
+          "name": "value",
+          "description": "联系方式值",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-logic-7"
+        }
+      ],
+      "createdAt": "2023-03-22T00:00:00.000Z",
+      "updatedAt": "2023-03-22T00:00:00.000Z"
+    },
+    {
+      "id": "logic-model-medication",
+      "name": "用药信息模型",
+      "description": "包含患者的用药信息",
+      "domainId": "medication",
+      "fields": [
+        {
+          "id": "field-med-1",
+          "name": "medicationId",
+          "description": "药品ID",
+          "type": "string",
+          "isRequired": true
+        },
+        {
+          "id": "field-med-2",
+          "name": "name",
+          "description": "药品名称",
+          "type": "string",
+          "isRequired": true
+        },
+        {
+          "id": "field-med-3",
+          "name": "dosage",
+          "description": "剂量信息",
+          "type": "object",
+          "isRequired": true
+        },
+        {
+          "id": "field-med-4",
+          "name": "value",
+          "description": "剂量值",
+          "type": "number",
+          "isRequired": true,
+          "parentId": "field-med-3"
+        },
+        {
+          "id": "field-med-5",
+          "name": "unit",
+          "description": "剂量单位",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-med-3"
+        }
+      ],
+      "createdAt": "2023-03-22T00:00:00.000Z",
+      "updatedAt": "2023-03-22T00:00:00.000Z"
+    }
+  ],
   "thirdPartyModels": [
     {
       "id": "third-party-example",
