@@ -2,6 +2,7 @@ import { useState } from 'react'
 import HomePage from './pages/HomePage'
 import LogicModelPage from './pages/LogicModelPage'
 import VisualModelPage from './pages/VisualModelPage'
+import ThirdPartyModelPage from './pages/ThirdPartyModelPage'
 import './index.css'
 
 function App() {
@@ -15,6 +16,8 @@ function App() {
         return <LogicModelPage />
       case 'visual-models':
         return <VisualModelPage />
+      case 'third-party-models':
+        return <ThirdPartyModelPage />
       default:
         return <HomePage onNavigate={setCurrentPage} />
     }

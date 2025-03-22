@@ -21,6 +21,79 @@
     }
   ],
   "logicDtoModels": [],
-  "thirdPartyModels": [],
+  "thirdPartyModels": [
+    {
+      "id": "third-party-example",
+      "name": "示例第三方数据模型",
+      "description": "展示第三方数据模型功能的示例",
+      "domainId": "patient",
+      "format": "json",
+      "fields": [
+        {
+          "id": "field-1",
+          "name": "patientId",
+          "description": "患者唯一标识",
+          "type": "string",
+          "isRequired": true
+        },
+        {
+          "id": "field-2", 
+          "name": "basicInfo",
+          "description": "患者基本信息",
+          "type": "object",
+          "isRequired": true
+        },
+        {
+          "id": "field-3",
+          "name": "name",
+          "description": "患者姓名",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-2"
+        },
+        {
+          "id": "field-4",
+          "name": "gender",
+          "description": "患者性别",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-2"
+        },
+        {
+          "id": "field-5",
+          "name": "birthDate",
+          "description": "出生日期",
+          "type": "date",
+          "isRequired": true,
+          "parentId": "field-2"
+        },
+        {
+          "id": "field-6",
+          "name": "contactInfo",
+          "description": "联系信息",
+          "type": "array",
+          "isRequired": false
+        },
+        {
+          "id": "field-7",
+          "name": "type",
+          "description": "联系方式类型",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-6"
+        },
+        {
+          "id": "field-8",
+          "name": "value", 
+          "description": "联系方式值",
+          "type": "string",
+          "isRequired": true,
+          "parentId": "field-6"
+        }
+      ],
+      "createdAt": "2023-03-22T00:00:00.000Z",
+      "updatedAt": "2023-03-22T00:00:00.000Z"
+    }
+  ],
   "mappingConfigurations": []
 } 
