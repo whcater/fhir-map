@@ -1,7 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, RefObject } from 'react';
 import { useAppStore } from '../store';
 import { MappingConfiguration, LogicDtoModel, FieldMetadata, FieldMapping, ThirdPartyModel, DataDomain } from '../types';
 import { nanoid } from 'nanoid';
+import * as monaco from 'monaco-editor';
+import { Monaco, OnMount } from '@monaco-editor/react';
+import * as fhirpath from 'fhirpath';
+import FhirPathBuilder from '../components/FhirPathBuilder';
+import JsonEditor from '../components/JsonEditor';
+import LogicModelViewer from '../components/LogicModelViewer';
+import PathCalculator from '../components/PathCalculator';
+import MappingControls from '../components/MappingControls';
+import { calculatePathFromToken, findTokenAtPosition } from '../utils/fhirPathUtils';
+import { calculateJsonPathAtPosition, convertJsonPathToFhirPath } from '../utils/jsonPathUtils';
 
 const MappingConfigPage: React.FC = () => {
   const { 
@@ -22,8 +32,17 @@ const MappingConfigPage: React.FC = () => {
   const [mappingView, setMappingView] = useState<'visual' | 'table'>('visual');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(window.matchMedia('(prefers-color-scheme: dark)').matches);
   
+  // 添加JSON解析和FHIR Path计算相关状态
+  const [parsedJson, setParsedJson] = useState<any>(null);
+  const [jsonLines, setJsonLines] = useState<Array<{line: string, path: string, lineNumber: number}>>([]);
+  const [jsonPathMap, setJsonPathMap] = useState<Map<number, string>>(new Map());
+  
+  // 显示JSON编辑器对话框
+  const [showJsonEditor, setShowJsonEditor] = useState<boolean>(false);
+  
   const jsonEditorRef = useRef<HTMLDivElement>(null);
-  const pathInputRef = useRef<HTMLInputElement>(null);
+  const pathInputRef = useRef<HTMLInputElement>(null) as RefObject<HTMLInputElement>;
+  const jsonInputRef = useRef<HTMLTextAreaElement>(null);
   
   // 添加一个新的组件或状态来处理高级FHIR Path生成
   const [showFhirPathBuilder, setShowFhirPathBuilder] = useState<boolean>(false);
@@ -36,8 +55,139 @@ const MappingConfigPage: React.FC = () => {
     { type: 'PractitionerRole', example: 'PractitionerRole.specialty[0].coding[0].display' },
     { type: 'Composition', example: 'Composition.section[0].title' }
   ]);
-  const [pathComponents, setPathComponents] = useState<Array<{type: string, path: string}>>([]);
-  const [builtPath, setBuiltPath] = useState<string>('');
+  
+  // 添加Monaco编辑器的引用
+  const monacoEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
+  
+  // FHIR路径计算函数 - 根据位置计算路径
+  const calculateFhirPathAtPosition = (position: monaco.Position): string => {
+    if (!monacoEditorRef.current){
+      console.log('编辑器引用不可用');
+      return '';
+    }
+    
+    if (!parsedJson){
+      console.log('parsedJson为null，尝试从编辑器内容重新解析');
+      try {
+        const editorModel = monacoEditorRef.current.getModel();
+        if (editorModel) {
+          const text = editorModel.getValue();
+          const json = JSON.parse(text);
+          // 异步更新parsedJson
+          setTimeout(() => setParsedJson(json), 0);
+          // 继续使用临时解析的JSON
+          return calculatePathWithJson(position, json);
+        }
+      } catch (error) {
+        console.error('临时解析JSON失败:', error);
+      }
+      return '';
+    }
+    
+    return calculatePathWithJson(position, parsedJson);
+  };
+  
+  // 辅助函数 - 使用特定的JSON对象计算路径
+  const calculatePathWithJson = (position: monaco.Position, json: any): string => {
+    if (!monacoEditorRef.current) return '';
+    
+    const editorModel = monacoEditorRef.current.getModel();
+    if (!editorModel){
+      console.log('编辑器模型不可用');
+      return '';
+    }
+    
+    try {
+      // 尝试使用FHIR Path计算方式
+      const lineContent = editorModel.getLineContent(position.lineNumber);
+      console.log('lineContent', lineContent);
+      const token = findTokenAtPosition(lineContent, position.column);
+      
+      if (!token) return '';
+      
+      // 计算从根到当前位置的路径
+      return calculatePathFromToken(token, json);
+    } catch (error) {
+      console.error('计算FHIR路径时出错，尝试使用JSON Path:', error);
+      
+      // 使用JSON Path作为备选
+      try {
+        // 获取整个文本
+        const text = editorModel.getValue();
+        const jsonPath = calculateJsonPathAtPosition(json, position, text);
+        
+        // 将JSON Path转换为FHIR Path
+        return convertJsonPathToFhirPath(jsonPath, json);
+      } catch (jsonError) {
+        console.error('计算JSON路径时出错:', jsonError);
+        return '';
+      }
+    }
+  };
+  
+  // 编辑器初始化时的处理函数
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    monacoEditorRef.current = editor;
+    monacoRef.current = monaco;
+    
+    // 设置编辑器主题
+    monaco.editor.defineTheme('fhirTheme', {
+      base: isDarkMode ? 'vs-dark' : 'vs',
+      inherit: true,
+      rules: [],
+      colors: {}
+    });
+    monaco.editor.setTheme('fhirTheme');
+    
+    // 添加鼠标移动事件监听，用于路径计算
+    // editor.onMouseMove((e) => {
+    //   if (e.target.position) {
+    //     const position = e.target.position;
+    //     try {
+    //       const path = calculateFhirPathAtPosition(position);
+    //       if (path) {
+    //         setHoveredPath(path);
+    //       }
+    //     } catch (error) {
+    //       console.error('计算FHIR路径时出错:', error);
+    //     }
+    //   }
+    // });
+    
+    // 添加点击事件监听
+    editor.onMouseDown((e) => {
+      if (e.target.position) {
+        const position = e.target.position;
+        try {
+          const path = calculateFhirPathAtPosition(position);
+          if (path) {
+            setSelectedPath(path);
+            if (pathInputRef.current) {
+              pathInputRef.current.value = path;
+            }
+          }
+        } catch (error) {
+          console.error('计算FHIR路径时出错:', error);
+        }
+      }
+    });
+    
+    // 初始化解析JSON
+    try {
+      const json = JSON.parse(jsonEditorValue);
+      setParsedJson(json);
+    } catch (error) {
+      console.error('JSON解析错误:', error);
+    }
+  };
+  
+  // 当isDarkMode变化时，更新编辑器主题
+  useEffect(() => {
+    if (monacoRef.current) {
+      monacoRef.current.editor.setTheme(isDarkMode ? 'vs-dark' : 'vs');
+    }
+  }, [isDarkMode]);
   
   // 加载或创建映射配置
   useEffect(() => {
@@ -73,13 +223,156 @@ const MappingConfigPage: React.FC = () => {
     }
   }, [selectedDomain, selectedLogicModel, mappingConfigurations, logicDtoModels]);
   
-  // 模拟从JSON编辑器获取FHIR Path
+  // 当JSON编辑器内容变化时，解析JSON并计算路径
+  useEffect(() => {
+    try {
+      const json = JSON.parse(jsonEditorValue);
+      setParsedJson(json);
+      
+      // 计算每行的FHIR Path
+      const lines = jsonEditorValue.split('\n');
+      const linePathInfo: Array<{line: string, path: string, lineNumber: number}> = [];
+      const pathMap = new Map<number, string>();
+      
+      // 解析JSON结构并生成路径映射
+      const calculatePaths = (obj: any, currentPath: string = '') => {
+        if (!obj || typeof obj !== 'object') return;
+        
+        // 对于资源类型，确定基础路径
+        if (obj.resourceType) {
+          currentPath = obj.resourceType;
+        }
+        
+        // 遍历所有属性
+        Object.entries(obj).forEach(([key, value]) => {
+          // 跳过resourceType自身
+          if (key === 'resourceType') return;
+          
+          const newPath = currentPath ? `${currentPath}.${key}` : key;
+          
+          // 找到这个属性在JSON字符串中的位置
+          const keyPattern = new RegExp(`"${key}"\\s*:`, 'g');
+          let match;
+          let jsonStr = JSON.stringify(obj, null, 2);
+          let lineOffset = 0;
+          
+          // 计算此对象开始的行号偏移
+          const objStr = JSON.stringify(obj);
+          const objIndex = jsonEditorValue.indexOf(objStr.substring(0, Math.min(objStr.length, 20)));
+          if (objIndex >= 0) {
+            lineOffset = jsonEditorValue.substring(0, objIndex).split('\n').length - 1;
+          }
+          
+          // 在格式化的JSON中查找属性
+          const formattedObj = JSON.stringify(obj, null, 2);
+          const lines = formattedObj.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes(`"${key}"`)) {
+              // 找到了属性所在行
+              const actualLine = i + lineOffset;
+              pathMap.set(actualLine, newPath);
+              
+              // 为数组元素添加索引
+              if (Array.isArray(value)) {
+                for (let j = 0; j < value.length; j++) {
+                  const arrayItemPath = `${newPath}[${j}]`;
+                  // 估算数组项所在行
+                  const arrayLineEstimate = actualLine + 1 + j * (JSON.stringify(value[j], null, 2).split('\n').length + 1);
+                  pathMap.set(arrayLineEstimate, arrayItemPath);
+                  
+                  // 如果数组项是对象，递归计算其路径
+                  if (value[j] && typeof value[j] === 'object') {
+                    calculatePaths(value[j], arrayItemPath);
+                  }
+                }
+              } else if (value && typeof value === 'object') {
+                // 递归计算对象属性的路径
+                calculatePaths(value, newPath);
+              }
+              
+              break;
+            }
+          }
+        });
+      };
+      
+      calculatePaths(json);
+      
+      // 为每行匹配路径
+      lines.forEach((line, index) => {
+        // 查找最接近的路径
+        let path = '';
+        for (let i = index; i >= 0; i--) {
+          if (pathMap.has(i)) {
+            path = pathMap.get(i) || '';
+            break;
+          }
+        }
+        
+        linePathInfo.push({
+          line,
+          path,
+          lineNumber: index
+        });
+      });
+      
+      setJsonLines(linePathInfo);
+      setJsonPathMap(pathMap);
+    } catch (error) {
+      console.error('JSON解析错误:', error);
+    }
+  }, [jsonEditorValue]);
+  
+  // FHIR Path智能获取函数
   const handleGetPathFromCursor = () => {
-    // 这里是模拟实现，实际需要根据编辑器光标位置计算FHIR Path
-    const mockPath = hoveredPath || 'Patient.name[0].family';
-    setSelectedPath(mockPath);
-    if (pathInputRef.current) {
-      pathInputRef.current.value = mockPath;
+    // 获取当前选择的行号
+    const selection = window.getSelection();
+    if (!selection || !jsonEditorRef.current) return;
+    
+    // 确定选中的节点
+    const range = selection.getRangeAt(0);
+    const selectedNode = range.startContainer.parentNode;
+    
+    // 查找最近的行元素
+    let lineElement = selectedNode as HTMLElement | null;
+    while (lineElement && !lineElement.getAttribute('data-line-number')) {
+      const parentElement = lineElement.parentNode as HTMLElement;
+      if (parentElement === jsonEditorRef.current) {
+        lineElement = null;
+        break;
+      }
+      lineElement = parentElement;
+    }
+    
+    if (lineElement) {
+      const lineNumber = parseInt(lineElement.getAttribute('data-line-number') || '0', 10);
+      
+      // 查找此行的FHIR Path或最近的有效路径
+      let path = '';
+      if (jsonPathMap.has(lineNumber)) {
+        path = jsonPathMap.get(lineNumber) || '';
+      } else {
+        // 向上查找最近的路径
+        for (let i = lineNumber; i >= 0; i--) {
+          if (jsonPathMap.has(i)) {
+            path = jsonPathMap.get(i) || '';
+            break;
+          }
+        }
+      }
+      
+      if (path) {
+        setSelectedPath(path);
+        if (pathInputRef.current) {
+          pathInputRef.current.value = path;
+        }
+      }
+    } else if (hoveredPath) {
+      // 回退到悬停路径
+      setSelectedPath(hoveredPath);
+      if (pathInputRef.current) {
+        pathInputRef.current.value = hoveredPath;
+      }
     }
   };
   
@@ -131,537 +424,87 @@ const MappingConfigPage: React.FC = () => {
     setHoveredPath(path);
   };
   
-  // 过滤逻辑模型字段
-  const filteredFields = (model?: LogicDtoModel) => {
-    if (!model) return [];
+  // 添加修改字段映射的功能
+  const handleUpdateFieldMapping = (sourceFieldId: string, fhirPath: string) => {
+    if (!activeMapping) return;
     
-    const filterFields = (fields: FieldMetadata[], parentPath = ''): FieldMetadata[] => {
-      return fields.filter(field => {
-        const fullName = parentPath ? `${parentPath}.${field.name}` : field.name;
-        return !searchTerm || fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-               (field.description && field.description.toLowerCase().includes(searchTerm.toLowerCase()));
-      });
-    };
-    
-    return filterFields(model.fields);
-  };
-  
-  // 获取字段的FHIR映射路径
-  const getFieldFhirPath = (fieldId: string): string => {
-    if (!activeMapping) return '';
-    const mapping = activeMapping.fieldMappings.find((f: FieldMapping) => f.sourceFieldId === fieldId);
-    return mapping ? mapping.targetFieldId : '';
-  };
-  
-  // 渲染递归树形逻辑模型字段
-  const renderLogicFields = (fields: FieldMetadata[], parentPath = '', level = 0) => {
-    // 首先，将字段按层次结构整理
-    const rootFields = fields.filter(field => !field.parentId);
-    
-    const getChildFields = (parentId: string) => {
-      return fields.filter(field => field.parentId === parentId);
-    };
-    
-    const renderField = (field: FieldMetadata, fieldPath = '', fieldLevel = 0) => {
-      const fullPath = fieldPath ? `${fieldPath}.${field.name}` : field.name;
-      const fhirPath = getFieldFhirPath(field.id);
-      const childFields = getChildFields(field.id);
-      
-      return (
-        <div key={field.id} className="border-b border-gray-200 dark:border-gray-700">
-          <div 
-            className={`py-2 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-between`}
-            style={{ paddingLeft: `${(fieldLevel * 1.5) + 0.5}rem` }}
-          >
-            <div className="flex items-center flex-1">
-              {childFields.length > 0 ? (
-                <i className="fas fa-folder mr-2 text-blue-500"></i>
-              ) : field.type === 'array' ? (
-                <i className="fas fa-list mr-2 text-indigo-500"></i>
-              ) : (
-                <i className="fas fa-tag mr-2 text-green-500"></i>
-              )}
-              <div className="flex flex-col">
-                <span className="font-medium">{field.name}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {field.type} {field.description && `- ${field.description}`}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              {fhirPath ? (
-                <div className="flex items-center">
-                  <span className="text-sm text-green-600 dark:text-green-400 mr-2">{fhirPath}</span>
-                  <button 
-                    onClick={() => handleRemoveFieldMapping(field.id)}
-                    className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    <i className="fas fa-times"></i>
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    if (selectedPath) {
-                      handleAddFieldMapping(field, selectedPath);
-                      setSelectedPath('');
-                      if (pathInputRef.current) {
-                        pathInputRef.current.value = '';
-                      }
-                    }
-                  }}
-                  disabled={!selectedPath}
-                  className={`px-3 py-1 text-xs rounded-full ${selectedPath ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed'}`}
-                >
-                  <i className="fas fa-link mr-1"></i>
-                  映射
-                </button>
-              )}
-            </div>
-          </div>
-          
-          {childFields.length > 0 && (
-            <div className="pl-4 border-l border-gray-200 dark:border-gray-700 ml-4">
-              {childFields.map(childField => renderField(childField, fullPath, fieldLevel + 1))}
-            </div>
-          )}
-        </div>
-      );
-    };
-    
-    return rootFields.map(field => renderField(field, parentPath, level));
-  };
-  
-  // 模拟JSON编辑器区域（实际应用中应使用Monaco Editor或JSON编辑器组件）
-  const renderJsonEditor = () => {
-    const jsonPaths = [
-      'Patient',
-      'Patient.id',
-      'Patient.name[0]',
-      'Patient.name[0].use',
-      'Patient.name[0].family',
-      'Patient.name[0].given[0]',
-      'Patient.gender',
-      'Patient.birthDate'
-    ];
-    
-    return (
-      <div 
-        ref={jsonEditorRef}
-        className="relative w-full h-full p-4 font-mono text-sm overflow-auto bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md" 
-      >
-        <pre className="whitespace-pre-wrap">
-          {jsonEditorValue.split('\n').map((line, i) => {
-            // 为每行寻找对应的路径（这是模拟实现）
-            const linePathIndex = Math.min(i, jsonPaths.length - 1);
-            const linePath = jsonPaths[linePathIndex];
-            
-            return (
-              <div 
-                key={i}
-                onMouseEnter={() => handleEditorHover(linePath)}
-                onMouseLeave={() => handleEditorHover('')}
-                onClick={() => setSelectedPath(linePath)}
-                className={`px-1 ${selectedPath === linePath ? 'bg-yellow-200 dark:bg-yellow-900' : hoveredPath === linePath ? 'bg-blue-100 dark:bg-blue-900' : ''} cursor-pointer`}
-              >
-                {line}
-              </div>
-            );
-          })}
-        </pre>
-      </div>
-    );
-  };
-  
-  // 渲染视觉映射视图
-  const renderVisualMapping = () => {
-    if (!activeMapping || !selectedLogicModel) return <div className="p-4 text-center text-gray-500">请先选择域和逻辑模型</div>;
-    
-    const model = logicDtoModels.find((m: LogicDtoModel) => m.id === selectedLogicModel);
-    if (!model) return <div className="p-4 text-center text-gray-500">未找到选择的逻辑模型</div>;
-    
-    return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex justify-between items-center mb-4 p-2 bg-gray-100 dark:bg-gray-800 rounded-md">
-          <div className="flex items-center space-x-2">
-            <i className="fas fa-filter text-blue-500"></i>
-            <input
-              type="text"
-              placeholder="搜索字段..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div>
-            <button
-              onClick={() => setMappingView('visual')}
-              className={`px-3 py-1 mx-1 rounded-md ${mappingView === 'visual' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-            >
-              <i className="fas fa-sitemap mr-1"></i>
-              视觉
-            </button>
-            <button
-              onClick={() => setMappingView('table')}
-              className={`px-3 py-1 mx-1 rounded-md ${mappingView === 'table' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-            >
-              <i className="fas fa-table mr-1"></i>
-              表格
-            </button>
-          </div>
-        </div>
-        
-        {mappingView === 'visual' ? (
-          <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-700 rounded-md">
-            {renderLogicFields(model.fields)}
-          </div>
-        ) : (
-          <div className="flex-1 overflow-auto border border-gray-200 dark:border-gray-700 rounded-md">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">路径</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">类型</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">FHIR Path</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                {renderTableRows(model.fields)}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
-  // 添加渲染表格行的函数
-  const renderTableRows = (fields: FieldMetadata[]) => {
-    // 构建扁平化的字段列表，包含完整路径
-    const flattenedFields: Array<{field: FieldMetadata, fullPath: string}> = [];
-    
-    const flattenFields = (fieldList: FieldMetadata[], parentPath = '') => {
-      fieldList.forEach(field => {
-        const currentPath = parentPath ? `${parentPath}.${field.name}` : field.name;
-        flattenedFields.push({ field, fullPath: currentPath });
-        
-        // 查找此字段的子字段
-        const childFields = fields.filter(f => f.parentId === field.id);
-        if (childFields.length > 0) {
-          flattenFields(childFields, currentPath);
-        }
-      });
-    };
-    
-    // 获取根字段（没有parentId的字段）
-    const rootFields = fields.filter(field => !field.parentId);
-    flattenFields(rootFields);
-    
-    // 按路径排序
-    flattenedFields.sort((a, b) => a.fullPath.localeCompare(b.fullPath));
-    
-    // 渲染行
-    return flattenedFields.map(({ field, fullPath }) => {
-      const fhirPath = getFieldFhirPath(field.id);
-      
-      return (
-        <tr key={field.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-            {fullPath}
-          </td>
-          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-            {field.type}
-          </td>
-          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-            {fhirPath || "-"}
-          </td>
-          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-            {fhirPath ? (
-              <button 
-                onClick={() => handleRemoveFieldMapping(field.id)} 
-                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-              >
-                <i className="fas fa-trash-alt"></i>
-              </button>
-            ) : (
-              <button 
-                onClick={() => {
-                  if (selectedPath) {
-                    handleAddFieldMapping(field, selectedPath);
-                    setSelectedPath('');
-                    if (pathInputRef.current) {
-                      pathInputRef.current.value = '';
-                    }
-                  }
-                }}
-                disabled={!selectedPath}
-                className={`px-3 py-1 text-xs rounded-full ${selectedPath ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed'}`}
-              >
-                <i className="fas fa-link mr-1"></i>
-                映射
-              </button>
-            )}
-          </td>
-        </tr>
-      );
+    setActiveMapping({
+      ...activeMapping,
+      fieldMappings: activeMapping.fieldMappings.map((m: FieldMapping) => 
+        m.sourceFieldId === sourceFieldId 
+          ? { ...m, targetFieldId: fhirPath, updatedAt: new Date().toISOString() } 
+          : m
+      ),
+      updatedAt: new Date().toISOString()
     });
   };
   
-  // 复杂FHIR Path生成功能
-  const addPathComponent = (type: string, path: string) => {
-    // 将组件添加到路径
-    setPathComponents([...pathComponents, { type, path }]);
-    
-    // 重新构建完整路径
-    let newPath = '';
-    if (pathComponents.length === 0) {
-      // 第一个组件
-      newPath = path;
-    } else {
-      // 根据之前的路径构建
-      const lastPath = pathComponents[pathComponents.length - 1].path;
-      
-      // 检查是否添加引用解析
-      if (path.startsWith('reference.resolve')) {
-        newPath = `${lastPath}.${path}`;
-      } else if (lastPath.includes('Bundle')) {
-        // 处理Bundle特殊情况
-        if (lastPath.includes('entry') && !lastPath.includes('resource')) {
-          newPath = `${lastPath}.resource.ofType(${type})`;
-        } else {
-          newPath = `${lastPath}.${path}`;
-        }
-      } else {
-        newPath = `${lastPath}.${path}`;
-      }
-    }
-    
-    setBuiltPath(newPath);
-    setSelectedPath(newPath);
-  };
-
-  // 重置路径构建器
-  const resetPathBuilder = () => {
-    setPathComponents([]);
-    setBuiltPath('');
-  };
-
   // 使用现有路径初始化构建器
   const initializePathBuilderWithPath = (path: string) => {
+    // 此函数已移至FhirPathBuilder组件内部实现
     if (!path) return;
-    
-    // 拆分路径到组件
-    const parts = path.split('.');
-    const newComponents: Array<{type: string, path: string}> = [];
-    
-    // 解析类型和路径
-    let currentPath = '';
-    parts.forEach((part, index) => {
-      // 尝试提取资源类型
-      const typeMatch = part.match(/ofType\(([A-Za-z]+)\)/);
-      const refMatch = part.match(/resolve\(([A-Za-z]+)\)/);
-      
-      if (typeMatch) {
-        const resourceType = typeMatch[1];
-        currentPath = index === 0 ? part : `${currentPath}.${part}`;
-        newComponents.push({ type: resourceType, path: currentPath });
-      } else if (refMatch) {
-        const resourceType = refMatch[1];
-        currentPath = index === 0 ? part : `${currentPath}.${part}`;
-        newComponents.push({ type: resourceType, path: currentPath });
-      } else {
-        // 普通路径部分
-        currentPath = index === 0 ? part : `${currentPath}.${part}`;
-        
-        // 尝试从第一个部分判断资源类型
-        if (index === 0 && availableResources.some(r => r.type === part)) {
-          newComponents.push({ type: part, path: part });
-        } else if (newComponents.length > 0) {
-          // 更新最后一个组件的路径
-          const lastComponent = newComponents[newComponents.length - 1];
-          newComponents[newComponents.length - 1] = { 
-            ...lastComponent, 
-            path: currentPath 
-          };
+    setSelectedPath(path);
+  };
+  
+  // 处理编辑器光标位置变化
+  const handleCursorPositionChange = (position: monaco.Position) => {
+    try {
+      // 首先确保parsedJson已初始化
+      if (!parsedJson) {
+        console.log('parsedJson为null，尝试从编辑器内容重新解析');
+        try {
+          const json = JSON.parse(jsonEditorValue);
+          setParsedJson(json);
+          // 如果解析成功但尚未准备好，可以在下一个事件循环中重试
+          setTimeout(() => {
+            if (parsedJson) {
+              const path = calculateFhirPathAtPosition(position);
+              if (path) {
+                setHoveredPath(path);
+              }
+            }
+          }, 0);
+          return;
+        } catch (error) {
+          console.error('无法解析JSON:', error);
+          return;
         }
       }
-    });
-    
-    setPathComponents(newComponents);
-    setBuiltPath(path);
-  };
 
-  // FHIR Path构建器对话框
-  const renderFhirPathBuilder = () => {
-    if (!showFhirPathBuilder) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-11/12 max-w-3xl max-h-[80vh] overflow-auto">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">FHIR Path 构建器</h3>
-            <button 
-              onClick={() => setShowFhirPathBuilder(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          </div>
-          
-          <div className="p-4">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                当前路径
-              </label>
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  value={builtPath}
-                  onChange={(e) => {
-                    setBuiltPath(e.target.value);
-                    setSelectedPath(e.target.value);
-                  }}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={resetPathBuilder}
-                  className="ml-2 px-3 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500"
-                >
-                  清除
-                </button>
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                路径组件
-              </label>
-              <div className="mb-2 flex flex-wrap gap-2">
-                {pathComponents.map((component, index) => (
-                  <div key={index} className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                    <span className="mr-1 font-bold">{component.type}:</span>
-                    <span>{component.path}</span>
-                  </div>
-                ))}
-                {pathComponents.length === 0 && (
-                  <div className="text-gray-500 dark:text-gray-400 text-sm">
-                    尚未添加任何路径组件
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  添加资源类型
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {availableResources.map((resource) => (
-                    <button
-                      key={resource.type}
-                      onClick={() => addPathComponent(resource.type, resource.type)}
-                      className="px-2 py-1 text-sm rounded-md bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
-                    >
-                      {resource.type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  常用路径模板
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => addPathComponent('Bundle', 'Bundle.entry[*]')}
-                    className="px-2 py-1 text-sm rounded-md bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
-                  >
-                    Bundle.entry[*]
-                  </button>
-                  <button
-                    onClick={() => addPathComponent('Composition', 'section[*].entry[*].reference')}
-                    className="px-2 py-1 text-sm rounded-md bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
-                  >
-                    section[*].entry[*].reference
-                  </button>
-                  <button
-                    onClick={() => addPathComponent('Ref', 'reference.resolve(MedicationRequest)')}
-                    className="px-2 py-1 text-sm rounded-md bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
-                  >
-                    reference.resolve(MedicationRequest)
-                  </button>
-                  <button
-                    onClick={() => addPathComponent('Organization', 'organization.reference.resolve(Organization)')}
-                    className="px-2 py-1 text-sm rounded-md bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
-                  >
-                    organization.reference.resolve(Organization)
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                自定义路径片段
-              </label>
-              <div className="flex">
-                <input
-                  type="text"
-                  placeholder="例如：identifier[0].value 或 name[0].family"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const input = e.currentTarget.value.trim();
-                      if (input) {
-                        addPathComponent('Custom', input);
-                        e.currentTarget.value = '';
-                      }
-                    }
-                  }}
-                />
-                <button
-                  onClick={(e) => {
-                    const input = e.currentTarget.previousSibling as HTMLInputElement;
-                    const value = input.value.trim();
-                    if (value) {
-                      addPathComponent('Custom', value);
-                      input.value = '';
-                    }
-                  }}
-                  className="px-3 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600"
-                >
-                  添加
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowFhirPathBuilder(false)}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 mr-2"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedPath(builtPath);
-                  setShowFhirPathBuilder(false);
-                }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                应用路径
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+      // 计算当前位置的FHIR Path
+      const path = calculateFhirPathAtPosition(position);
+      console.log('handleCursorPositionChange', path);
+      // 如果找到了有效路径，更新悬停路径状态
+      if (path) {
+        setHoveredPath(path);
+      }
+    } catch (error) {
+      console.error('处理光标位置变化时出错:', error);
+    }
   };
+  
+  // 应用当前悬停路径
+  const applyHoveredPath = () => {
+    if (hoveredPath) {
+      setSelectedPath(hoveredPath);
+      if (pathInputRef.current) {
+        pathInputRef.current.value = hoveredPath;
+      }
+    }
+  };
+  
+  // 确保在组件挂载和JSON编辑器值变化时解析JSON
+  useEffect(() => {
+    if (jsonEditorValue) {
+      try {
+        const json = JSON.parse(jsonEditorValue);
+        setParsedJson(json);
+        console.log('成功解析JSON', json);
+      } catch (error) {
+        console.error('MappingConfigPage中JSON解析错误:', error);
+      }
+    }
+  }, [jsonEditorValue]);
   
   return (
     <div className={`min-h-screen flex flex-col ${isDarkMode ? 'dark' : ''}`}>
@@ -713,14 +556,21 @@ const MappingConfigPage: React.FC = () => {
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* 左侧：逻辑模型面板 */}
         <div className="w-full md:w-1/2 p-4 overflow-hidden flex flex-col h-full bg-white dark:bg-gray-800">
-          <div className="flex-1 overflow-hidden">
-            <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2 flex items-center">
-              <i className="fas fa-sitemap mr-2 text-blue-500"></i>
-              <span>逻辑模型映射</span>
-            </div>
-            
-            {renderVisualMapping()}
-          </div>
+          <LogicModelViewer
+            activeMapping={activeMapping}
+            selectedLogicModel={selectedLogicModel}
+            logicDtoModels={logicDtoModels}
+            searchTerm={searchTerm}
+            mappingView={mappingView}
+            selectedPath={selectedPath}
+            setSelectedPath={setSelectedPath}
+            setMappingView={setMappingView}
+            setSearchTerm={setSearchTerm}
+            onAddFieldMapping={handleAddFieldMapping}
+            onUpdateFieldMapping={handleUpdateFieldMapping}
+            onRemoveFieldMapping={handleRemoveFieldMapping}
+            pathInputRef={pathInputRef}
+          />
         </div>
         
         {/* 右侧：FHIR资源编辑器面板 */}
@@ -730,67 +580,50 @@ const MappingConfigPage: React.FC = () => {
             <span>FHIR 资源</span>
           </div>
           
-          <div className="mb-4 flex items-center space-x-2">
-            <input
-              ref={pathInputRef}
-              type="text"
-              placeholder="FHIR Path"
-              value={selectedPath}
-              onChange={(e) => setSelectedPath(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            
-            <button
-              onClick={() => {
-                if (selectedPath) {
-                  initializePathBuilderWithPath(selectedPath);
-                }
-                setShowFhirPathBuilder(true);
-              }}
-              className="px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              title="打开高级FHIR Path构建器"
-            >
-              <i className="fas fa-tools mr-1"></i>
-              高级
-            </button>
-            
-            <button
-              onClick={handleGetPathFromCursor}
-              className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <i className="fas fa-magic mr-1"></i>
-              从编辑器获取
-            </button>
-          </div>
+          <PathCalculator
+            selectedPath={selectedPath}
+            setSelectedPath={setSelectedPath}
+            pathInputRef={pathInputRef}
+            initializePathBuilderWithPath={initializePathBuilderWithPath}
+            setShowFhirPathBuilder={setShowFhirPathBuilder}
+            handleGetPathFromCursor={handleGetPathFromCursor}
+            hoveredPath={hoveredPath}
+            onApplyHoveredPath={applyHoveredPath}
+          />
           
           <div className="flex-1 overflow-hidden border border-gray-200 dark:border-gray-700 rounded-md">
-            {renderJsonEditor()}
+            <JsonEditor
+              jsonEditorValue={jsonEditorValue}
+              setJsonEditorValue={setJsonEditorValue}
+              setParsedJson={setParsedJson}
+              isDarkMode={isDarkMode}
+              handleEditorDidMount={handleEditorDidMount}
+              showJsonEditor={showJsonEditor}
+              setShowJsonEditor={setShowJsonEditor}
+              onCursorPositionChange={handleCursorPositionChange}
+            />
           </div>
         </div>
       </main>
       
       <footer className="bg-white dark:bg-gray-900 shadow-inner">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              已映射 <span className="font-medium text-blue-500">{activeMapping?.fieldMappings.length || 0}</span> 个字段
-            </span>
-          </div>
-          
-          <div>
-            <button
-              onClick={handleSaveMapping}
-              disabled={!activeMapping}
-              className={`px-4 py-2 rounded-md ${!activeMapping ? 'bg-gray-300 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'} focus:outline-none focus:ring-2 focus:ring-green-500`}
-            >
-              <i className="fas fa-save mr-1"></i>
-              保存映射
-            </button>
-          </div>
-        </div>
+        <MappingControls 
+          activeMapping={activeMapping}
+          onSaveMapping={handleSaveMapping}
+        />
       </footer>
       
-      {renderFhirPathBuilder()}
+      <FhirPathBuilder
+        initialPath={selectedPath}
+        parsedJson={parsedJson}
+        isOpen={showFhirPathBuilder}
+        onClose={() => setShowFhirPathBuilder(false)}
+        onApplyPath={(path) => {
+          setSelectedPath(path);
+          setShowFhirPathBuilder(false);
+        }}
+        availableResources={availableResources}
+      />
     </div>
   );
 };
