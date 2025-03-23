@@ -9,13 +9,19 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:fhir-map.openFhirMapDesigner"
+  ],
   "browser": "./dist/web/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "fhir-map.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "fhir-map.openFhirMapDesigner",
+        "title": "打开 FHIR 映射逻辑模型设计器"
       }
     ]
   },
@@ -32,10 +38,16 @@
     "lint": "eslint src",
     "run-in-browser": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. ."
   },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
   "devDependencies": {
     "@types/vscode": "^1.98.0",
     "@types/mocha": "^10.0.10",
     "@types/assert": "^1.5.11",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "eslint": "^9.21.0",
     "@typescript-eslint/eslint-plugin": "^8.25.0",
     "@typescript-eslint/parser": "^8.25.0",

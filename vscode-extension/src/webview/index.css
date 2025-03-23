@@ -1,0 +1,83 @@
+:root {
+  --container-padding: 20px;
+  --input-padding-vertical: 6px;
+  --input-padding-horizontal: 8px;
+  --input-margin-vertical: 4px;
+  --input-margin-horizontal: 0;
+}
+
+body {
+  padding: 0;
+  margin: 0;
+  color: var(--vscode-foreground);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+  font-family: var(--vscode-font-family);
+  background-color: var(--vscode-editor-background);
+}
+
+.app-container {
+  padding: var(--container-padding);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  color: var(--vscode-editor-foreground);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+}
+
+.input {
+  padding: var(--input-padding-vertical) var(--input-padding-horizontal);
+  border: 1px solid var(--vscode-input-border);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+.button {
+  padding: var(--input-padding-vertical) var(--input-padding-horizontal);
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: var(--vscode-font-family);
+  font-weight: var(--vscode-font-weight);
+}
+
+.button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.response {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 2px;
+}
+
+.response h3 {
+  margin-top: 0;
+  color: var(--vscode-editor-foreground);
+}
+
+.response p {
+  margin-bottom: 0;
+  color: var(--vscode-editor-foreground);
+} 

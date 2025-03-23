@@ -1,6 +1,7 @@
 # FHIR映射逻辑模型设计器 - VS Code插件待办事项
 
-重点： vscode插件项目目录在 fhir-map-extension/fhir-map/fhir-map/ 下
+目标： 将FHIR映射逻辑模型设计器(react web项目) 迁移到 fhir-map-extension/ 下
+重点： vscode插件项目目录在 fhir-map-extension/ 下
 
 ## 项目架构调整
 
@@ -10,10 +11,10 @@
   - [x] 配置插件激活事件（activationEvents）
   - [x] 实现插件入口点（extension.ts）
 
-- [ ] 调整现有React应用架构
-  - [ ] 将前端应用迁移至插件webview架构
-  - [ ] 实现VS Code和webview之间的通信接口
-  - [ ] 分离UI组件与业务逻辑，便于在webview中重用
+- [x] 调整现有React应用架构
+  - [x] 将前端应用迁移至插件webview架构
+  - [x] 实现VS Code和webview之间的通信接口
+  - [x] 分离UI组件与业务逻辑，便于在webview中重用
 
 ## 开发环境配置
 
@@ -22,9 +23,9 @@
   - [x] `vscode-test` - 用于测试VS Code扩展
   - [x] `@vscode/webview-ui-toolkit` - VS Code UI组件库
 
-- [ ] 配置插件开发调试环境
-  - [ ] 设置launch.json配置文件
-  - [ ] 配置插件调试任务
+- [x] 配置插件开发调试环境
+  - [x] 设置launch.json配置文件
+  - [x] 配置插件调试任务
 
 ## 前端适配
 

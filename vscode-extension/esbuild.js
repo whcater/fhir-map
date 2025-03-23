@@ -2,6 +2,7 @@ const esbuild = require('esbuild');
 const glob = require('glob');
 const path = require('path');
 const polyfill = require('@esbuild-plugins/node-globals-polyfill');
+const fs = require('fs');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -61,7 +62,7 @@ async function main() {
 	const ctx = await esbuild.context({
 		entryPoints: [
 			'src/web/extension.ts',
-			'src/web/test/suite/extensionTests.ts'
+			'src/web/test/suite/extensionTests.ts',
 		],
 		bundle: true,
 		format: 'cjs',
@@ -86,8 +87,51 @@ async function main() {
 			esbuildProblemMatcherPlugin, /* add to the end of plugins array */
 		],
 	});
+	
+	// 单独配置 webview 的构建，输出到 dist/webview 目录
+	await esbuild.build({
+		entryPoints: ['src/webview/index.tsx'],
+		bundle: true,
+		minify: production,
+		sourcemap: !production,
+		format: 'esm', // 使用 ESM 格式
+		outfile: 'dist/webview/index.js',
+		platform: 'browser',
+		target: ['es2020'],
+		define: {
+			'process.env.NODE_ENV': production ? '"production"' : '"development"',
+			'global': 'window'
+		},
+		loader: {
+			'.tsx': 'tsx',
+			'.ts': 'tsx',
+			'.jsx': 'jsx',
+			'.js': 'jsx',
+		},
+		plugins: [
+			esbuildProblemMatcherPlugin,
+		],
+		logLevel: 'info', // 添加详细日志
+	});
+	
+	// 复制 CSS 文件到输出目录
+	const cssContent = await fs.promises.readFile('src/webview/index.css', 'utf8');
+	await fs.promises.mkdir('dist/webview', { recursive: true });
+	await fs.promises.writeFile('dist/webview/index.css', cssContent);
+	
 	if (watch) {
 		await ctx.watch();
+		
+		// 在观察模式下监视 CSS 文件的变化
+		fs.watch('src/webview/index.css', async () => {
+			try {
+				const updatedCss = await fs.promises.readFile('src/webview/index.css', 'utf8');
+				await fs.promises.writeFile('dist/webview/index.css', updatedCss);
+				console.log('[watch] CSS file updated');
+			} catch (error) {
+				console.error('Error updating CSS file:', error);
+			}
+		});
 	} else {
 		await ctx.rebuild();
 		await ctx.dispose();

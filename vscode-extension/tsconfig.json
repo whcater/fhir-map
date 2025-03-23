@@ -4,14 +4,17 @@
       "target": "ES2020",
       "outDir": "dist",
       "lib": [
-        "ES2020", "WebWorker", "DOM", "DOM.Iterable"
+        "ES2020", "DOM"
       ],
       "sourceMap": true,
       "rootDir": "src",
       "strict": true,
       "noImplicitReturns": false,
       "noFallthroughCasesInSwitch": false,
-      "noUnusedParameters": false
+      "noUnusedParameters": false,
+      "jsx": "react",
+      "esModuleInterop": true,
+      "skipLibCheck": true
     }
   }
   
