@@ -9,6 +9,7 @@
 - 直观的视觉逻辑模型图生成
 - 按数据领域组织的映射配置管理
 - 现代化、响应式的用户界面设计
+- FHIR Path 满足 FHIR 标准[FHIR Path](https://hl7.org/fhirpath/)
 
 ## 开发环境
 

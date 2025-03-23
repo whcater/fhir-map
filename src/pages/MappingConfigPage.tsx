@@ -570,6 +570,7 @@ const MappingConfigPage: React.FC = () => {
             onUpdateFieldMapping={handleUpdateFieldMapping}
             onRemoveFieldMapping={handleRemoveFieldMapping}
             pathInputRef={pathInputRef}
+            onSaveMapping={handleSaveMapping}
           />
         </div>
         
