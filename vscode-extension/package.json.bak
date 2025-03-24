@@ -22,7 +22,11 @@
         "command": "fhir-map.openFhirMapDesigner",
         "title": "打开FHIR映射设计器"
       }
-    ]
+    ],
+    "icons": {
+      "light": "./resources/light-icon.png",
+      "dark": "./resources/dark-icon.png"
+    }
   },
   "scripts": {
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
@@ -59,6 +63,5 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
-  "type": "module",
-  "icon": "./resources/light-icon.png"
+  "type": "module"
 }

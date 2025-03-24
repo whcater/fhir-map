@@ -1,4 +1,14 @@
 import React, { useState, useEffect, Component, ErrorInfo, useRef } from 'react';
+// 改用动态导入来解决模块类型问题
+// @ts-ignore
+import {
+  VSCodeButton,
+  VSCodeTextField,
+  VSCodeDivider,
+  VSCodePanels,
+  VSCodePanelTab,
+  VSCodePanelView
+} from '@vscode/webview-ui-toolkit/react';
 
 // 错误边界组件
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -18,7 +28,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', color: 'red', border: '1px solid red', borderRadius: '4px' }}>
+        <div style={{ padding: '20px', color: 'var(--vscode-errorForeground)', border: '1px solid var(--vscode-errorForeground)', borderRadius: '4px' }}>
           <h2>组件发生错误</h2>
           <p>{this.state.error?.message || '未知错误'}</p>
         </div>
@@ -43,6 +53,7 @@ try {
 const App: React.FC = () => {
   const [message, setMessage] = useState<string>('');
   const [response, setResponse] = useState<string | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light'); 
 
   useEffect(() => {
     console.log('App 组件已挂载');
@@ -55,12 +66,23 @@ const App: React.FC = () => {
     // 监听来自 VS Code 的消息
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
+      
       if (message && message.command === 'response') {
         setResponse(message.text);
+      }
+      
+      // 主题变更消息处理
+      if (message && message.command === 'themeChanged') {
+        setCurrentTheme(message.theme);
       }
     };
     
     window.addEventListener('message', handleMessage);
+    
+    // 获取初始主题
+    vscodeApiInstance.postMessage({
+      command: 'getTheme'
+    });
     
     // 清理函数
     return () => {
@@ -107,30 +129,48 @@ const App: React.FC = () => {
       <h1>FHIR 映射逻辑模型设计器</h1>
       <p>这是一个基本的 React 应用，用于演示与 VS Code 的通信。</p>
       
-      <div className="form-group">
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="输入要发送的消息"
-          className="input"
-        />
-        <div className="button-group">
-          <button onClick={sendMessage} className="button">
-            发送消息到 VS Code
-          </button>
-          <button onClick={showNotification} className="button">
-            显示 VS Code 通知
-          </button>
-        </div>
-      </div>
-
+      <VSCodeDivider />
+      
+      <VSCodePanels>
+        <VSCodePanelTab id="tab-1">基本操作</VSCodePanelTab>
+        <VSCodePanelTab id="tab-2">高级功能</VSCodePanelTab>
+        
+        <VSCodePanelView id="view-1">
+          <div className="form-group">
+            <VSCodeTextField 
+              value={message}
+              onInput={(e) => {
+                const target = e.currentTarget as any;
+                setMessage(target.value);
+              }}
+              placeholder="输入要发送的消息"
+            />
+            <div className="button-group">
+              <VSCodeButton appearance="primary" onClick={sendMessage}>
+                发送消息到 VS Code
+              </VSCodeButton>
+              <VSCodeButton onClick={showNotification}>
+                显示 VS Code 通知
+              </VSCodeButton>
+            </div>
+          </div>
+        </VSCodePanelView>
+        
+        <VSCodePanelView id="view-2">
+          <p>高级功能敬请期待...</p>
+        </VSCodePanelView>
+      </VSCodePanels>
+      
       {response && (
         <div className="response">
           <h3>收到的响应:</h3>
           <p>{response}</p>
         </div>
       )}
+      
+      <div className="theme-info">
+        <p>当前主题: {currentTheme === 'dark' ? '暗色' : '亮色'}</p>
+      </div>
     </div>
   );
 };

@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
+    "build:all": "npm run build && cd vscode-extension && npm run build",
+    "build:prod": "npm run build -- --mode production && cd vscode-extension && npm run build:prod",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:extension": "cd vscode-extension && npm run dev",
+    "dev:all": "npm-run-all --parallel dev dev:extension"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -22,6 +26,7 @@
     "monaco-editor": "^0.52.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-router-dom": "^7.4.0",
     "xml2js": "^0.6.2",
     "zustand": "^5.0.3"
   },

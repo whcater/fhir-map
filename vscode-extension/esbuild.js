@@ -1,11 +1,15 @@
-const esbuild = require('esbuild');
-const glob = require('glob');
-const path = require('path');
-const polyfill = require('@esbuild-plugins/node-globals-polyfill');
-const fs = require('fs');
+import * as esbuild from 'esbuild';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const production = process.argv.includes('--production');
-const watch = process.argv.includes('--watch');
+// 获取当前文件的目录路径
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// 获取命令行参数
+const args = process.argv.slice(2);
+const watch = args.includes('--watch');
+const production = args.includes('--production');
 
 /**
  * This plugin hooks into the build process to print errors in a format that the problem matcher in
@@ -58,87 +62,62 @@ const testBundlePlugin = {
 	}
 };
 
-async function main() {
-	const ctx = await esbuild.context({
-		entryPoints: [
-			'src/web/extension.ts',
-			'src/web/test/suite/extensionTests.ts',
-		],
-		bundle: true,
-		format: 'cjs',
-		minify: production,
-		sourcemap: !production,
-		sourcesContent: false,
-		platform: 'browser',
-		outdir: 'dist/web',
-		external: ['vscode'],
-		logLevel: 'silent',
-		// Node.js global to browser globalThis
-		define: {
-			global: 'globalThis',
-		},
+// 设置构建选项
+const buildOptions = {
+	entryPoints: ['src/webview/index.tsx'],
+	bundle: true,
+	outfile: 'dist/webview/index.js',
+	minify: production,
+	sourcemap: !production,
+	platform: 'browser',
+	format: 'esm',
+	target: ['chrome89', 'edge89', 'firefox89', 'safari15'], // VS Code使用的最低浏览器版本
+	jsx: 'automatic',
+	loader: {
+		'.ts': 'ts',
+		'.tsx': 'tsx',
+		'.js': 'js',
+		'.jsx': 'jsx',
+		'.css': 'css'
+	},
+	external: ['vscode', 'fs', 'path', 'os', 'child_process'],
+	define: {
+		'process.env.NODE_ENV': production ? '"production"' : '"development"'
+	},
+	inject: ['./src/webview/process-shim.js'], // 可选：如果需要process对象
+	logLevel: 'info'
+};
 
-		plugins: [
-			polyfill.NodeGlobalsPolyfillPlugin({
-				process: true,
-				buffer: true,
-			}),
-			testBundlePlugin,
-			esbuildProblemMatcherPlugin, /* add to the end of plugins array */
-		],
-	});
+// 如果处于开发模式且启用了观察模式
+if (watch) {
+	// 启动观察模式
+	const context = await esbuild.context(buildOptions);
+	await context.watch();
+	console.log('监视中...');
+} else {
+	// 执行一次性构建
+	const result = await esbuild.build(buildOptions);
 	
-	// 单独配置 webview 的构建，输出到 dist/webview 目录
-	await esbuild.build({
-		entryPoints: ['src/webview/index.tsx'],
-		bundle: true,
-		minify: production,
-		sourcemap: !production,
-		format: 'esm', // 使用 ESM 格式
-		outfile: 'dist/webview/index.js',
-		platform: 'browser',
-		target: ['es2020'],
-		define: {
-			'process.env.NODE_ENV': production ? '"production"' : '"development"',
-			'global': 'window'
-		},
-		loader: {
-			'.tsx': 'tsx',
-			'.ts': 'tsx',
-			'.jsx': 'jsx',
-			'.js': 'jsx',
-		},
-		plugins: [
-			esbuildProblemMatcherPlugin,
-		],
-		logLevel: 'info', // 添加详细日志
-	});
+	if (result.errors.length > 0) {
+		console.error('构建过程中出现错误:', result.errors);
+		process.exit(1);
+	}
 	
-	// 复制 CSS 文件到输出目录
-	const cssContent = await fs.promises.readFile('src/webview/index.css', 'utf8');
-	await fs.promises.mkdir('dist/webview', { recursive: true });
-	await fs.promises.writeFile('dist/webview/index.css', cssContent);
+	if (result.warnings.length > 0) {
+		console.warn('构建过程中出现警告:', result.warnings);
+	}
 	
-	if (watch) {
-		await ctx.watch();
-		
-		// 在观察模式下监视 CSS 文件的变化
-		fs.watch('src/webview/index.css', async () => {
-			try {
-				const updatedCss = await fs.promises.readFile('src/webview/index.css', 'utf8');
-				await fs.promises.writeFile('dist/webview/index.css', updatedCss);
-				console.log('[watch] CSS file updated');
-			} catch (error) {
-				console.error('Error updating CSS file:', error);
-			}
-		});
-	} else {
-		await ctx.rebuild();
-		await ctx.dispose();
+	console.log('构建完成!');
+	
+	// 复制CSS文件到输出目录
+	try {
+		// 读取并写入CSS文件
+		const cssContent = readFileSync('src/webview/index.css', 'utf8');
+		const fs = await import('fs/promises');
+		await fs.mkdir('dist/webview', { recursive: true });
+		await fs.writeFile('dist/webview/index.css', cssContent);
+		console.log('CSS文件已复制到输出目录');
+	} catch (error) {
+		console.error('复制CSS文件时出错:', error);
 	}
 }
-
-main().catch(e => {
-	console.error(e);
-	process.exit(1);
-});

@@ -36,7 +36,9 @@ class FhirMapDesignerPanel {
         // 只允许访问特定资源
         localResourceRoots: [
           vscode.Uri.joinPath(extensionUri, 'resources'),
-          vscode.Uri.joinPath(extensionUri, 'webview-ui/build')
+          vscode.Uri.joinPath(extensionUri, 'webview-ui/build'),
+          vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'assets', 'App-*.js'),
+          vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'assets', 'vendor-*.js')
         ],
         // 保持内容不丢失
         retainContextWhenHidden: true

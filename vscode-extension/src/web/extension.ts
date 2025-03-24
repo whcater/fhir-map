@@ -6,6 +6,13 @@ import { join } from 'path';
 // 保存 WebviewPanel 的实例，便于后续访问
 let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
+// 获取当前主题
+function getCurrentTheme(): 'light' | 'dark' {
+	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark 
+		|| vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast 
+		? 'dark' : 'light';
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -13,6 +20,19 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "fhir-map" is now active in the web extension host!');
+	
+	// 监听主题变化
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveColorTheme(theme => {
+			if (currentPanel) {
+				// 发送主题变化消息到 webview
+				currentPanel.webview.postMessage({
+					command: 'themeChanged',
+					theme: getCurrentTheme()
+				});
+			}
+		})
+	);
 
 	// 注册打开 FHIR 映射设计器的命令
 	const disposable = vscode.commands.registerCommand('fhir-map.openFhirMapDesigner', () => {
@@ -39,8 +59,13 @@ export function activate(context: vscode.ExtensionContext) {
 				// 限制 webview 可访问的资源
 				localResourceRoots: [
 					vscode.Uri.joinPath(context.extensionUri, 'dist'),
-					vscode.Uri.joinPath(context.extensionUri, 'resources')
-				]
+					vscode.Uri.joinPath(context.extensionUri, 'resources'),
+					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview'),
+					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets'),
+					vscode.Uri.joinPath(context.extensionUri, 'webview-ui/build'),
+					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'App-*.js'),
+					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'vendor-*.js')
+				  ],
 			}
 		);
 
@@ -73,6 +98,46 @@ export function activate(context: vscode.ExtensionContext) {
 						return;
 					case 'showErrorMessage':
 						vscode.window.showErrorMessage(message.text);
+						return;
+					case 'getTheme':
+						// 发送当前主题信息到 webview
+						currentPanel?.webview.postMessage({
+							command: 'themeChanged',
+							theme: getCurrentTheme()
+						});
+						return;
+					case 'getResourcePath':
+						// 处理资源路径请求
+						if (message.path && currentPanel) {
+							// 构建VS Code资源URI
+							let resourceUri;
+							try {
+								// 如果是绝对路径，直接使用
+								if (message.path.startsWith('/')) {
+									resourceUri = vscode.Uri.file(message.path);
+								} else {
+									// 相对路径，从扩展资源目录解析
+									resourceUri = vscode.Uri.joinPath(context.extensionUri, 'resources', message.path);
+								}
+								
+								// 转换为Webview可用的URI
+								const webviewResourceUri = currentPanel.webview.asWebviewUri(resourceUri).toString();
+								
+								// 返回处理后的资源路径
+								currentPanel.webview.postMessage({
+									command: 'resourcePath',
+									resourcePath: webviewResourceUri,
+									originalPath: message.path
+								});
+							} catch (error) {
+								// 发送错误信息
+								currentPanel.webview.postMessage({
+									command: 'resourcePathError',
+									error: `处理资源路径错误: ${error instanceof Error ? error.message : String(error)}`,
+									originalPath: message.path
+								});
+							}
+						}
 						return;
 				}
 			},
@@ -121,7 +186,7 @@ function getReactWebviewContent(context: vscode.ExtensionContext, webview: vscod
 			console.log('WebView 已加载，正在尝试初始化 React 应用...');
 			window.onerror = function(message, source, lineno, colno, error) {
 				console.error('WebView 错误:', message, 'at', source, lineno, colno);
-				document.getElementById('root').innerHTML = '<div style="color:red;padding:20px;"><h2>加载错误</h2><p>' + message + '</p><p>位置: ' + source + ':' + lineno + ':' + colno + '</p></div>';
+				document.getElementById('root').innerHTML = '<div style="color:var(--vscode-errorForeground);padding:20px;"><h2>加载错误</h2><p>' + message + '</p><p>位置: ' + source + ':' + lineno + ':' + colno + '</p></div>';
 				return true;
 			};
 		</script>

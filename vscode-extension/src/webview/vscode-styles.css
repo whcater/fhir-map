@@ -1,0 +1,166 @@
+/**
+ * VS Code Webview特定样式
+ * 用于适配VS Code主题和UI规范
+ */
+
+/* 基础样式 */
+:root {
+  /* 容器内边距 */
+  --container-padding: 20px;
+  /* 输入元素内边距 */
+  --input-padding-vertical: 6px;
+  --input-padding-horizontal: 8px;
+  /* 输入元素外边距 */
+  --input-margin-vertical: 4px;
+  --input-margin-horizontal: 0;
+}
+
+/* 基础元素样式 */
+body {
+  padding: 0;
+  margin: 0;
+  color: var(--vscode-foreground);
+  font-size: var(--vscode-font-size);
+  font-weight: var(--vscode-font-weight);
+  font-family: var(--vscode-font-family);
+  background-color: var(--vscode-editor-background);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--vscode-editor-background);
+}
+
+/* VS Code WebView UI工具包组件样式调整 */
+vscode-panels {
+  margin-top: 20px;
+}
+
+vscode-panel-view {
+  padding: 16px 0;
+}
+
+vscode-text-field {
+  margin-bottom: 10px;
+}
+
+vscode-button {
+  margin: 0 5px;
+}
+
+vscode-dropdown {
+  margin-bottom: 10px;
+}
+
+/* 共享容器样式 */
+.app-container {
+  padding: var(--container-padding);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 状态样式 */
+.loading {
+  color: var(--vscode-foreground);
+  text-align: center;
+  padding: 20px;
+}
+
+.error {
+  color: var(--vscode-errorForeground);
+  border: 1px solid var(--vscode-errorForeground);
+  border-radius: 4px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.success {
+  color: var(--vscode-terminal-ansiGreen);
+  border: 1px solid var(--vscode-terminal-ansiGreen);
+  border-radius: 4px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.warning {
+  color: var(--vscode-editorWarning-foreground);
+  border: 1px solid var(--vscode-editorWarning-foreground);
+  border-radius: 4px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+/* 调试信息 */
+.debug-info {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border-radius: 2px;
+  display: inline-block;
+  font-size: 12px;
+}
+
+/* 确保表单元素在VS Code中有正确的样式 */
+input, select, textarea {
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  padding: var(--input-padding-vertical) var(--input-padding-horizontal);
+  font-family: var(--vscode-font-family);
+}
+
+button {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  padding: var(--input-padding-vertical) var(--input-padding-horizontal);
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+/* 链接样式 */
+a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+/* 标题样式 */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--vscode-editor-foreground);
+  font-weight: 600;
+}
+
+code {
+  font-family: var(--vscode-editor-font-family);
+  background-color: var(--vscode-textCodeBlock-background);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 90%;
+} 
