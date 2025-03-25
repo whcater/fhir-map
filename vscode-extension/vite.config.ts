@@ -82,15 +82,13 @@ export default defineConfig(({ mode }) => {
             }
             return 'assets/[name]-[hash][extname]';
           },
-          // 代码分割策略
-          manualChunks: (id) => {
-            if (id.includes('node_modules')) {
-              // 将所有node_modules的依赖打包到一个chunk
-              return 'vendor';
-            }
-          },
+          // 内联动态导入，避免运行时添加脚本标签
+          inlineDynamicImports: true,
         },
       },
+      // 预加载所有资源，减少运行时的 DOM 操作
+      assetsInlineLimit: 100000000, // 较大的值以内联小资源
+      emptyOutDir: true,
     },
     
     // 解析配置
@@ -111,6 +109,8 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
       ],
+      // 强制预构建所有依赖
+      force: true,
     },
     
     // 定义环境变量

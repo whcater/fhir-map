@@ -174,7 +174,18 @@ function getReactWebviewContent(context: vscode.ExtensionContext, webview: vscod
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src ${webview.cspSource}; img-src ${webview.cspSource} https:; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; style-src ${webview.cspSource} 'unsafe-inline';">
+		<meta http-equiv="Content-Security-Policy" content="
+			default-src 'self' ${webview.cspSource};
+			script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval' blob:;
+			style-src ${webview.cspSource} 'unsafe-inline';
+			img-src ${webview.cspSource} https: data: blob:;
+			font-src ${webview.cspSource} https: data:;
+			connect-src ${webview.cspSource} https:;
+			child-src ${webview.cspSource} 'self' blob:;
+			worker-src blob: ${webview.cspSource};
+			manifest-src 'self';
+			media-src ${webview.cspSource} https:;
+		">
 		<title>FHIR 映射逻辑模型设计器</title>
 		<link href="${styleUri}" rel="stylesheet" />
 	</head>
