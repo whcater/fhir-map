@@ -31,17 +31,28 @@ export default defineConfig(({ mode }) => {
             
             // 读取源CSS文件
             const sourceCssPath = path.resolve(__dirname, 'src/webview/index.css');
-            const cssContent = fs.readFileSync(sourceCssPath, 'utf-8');
-            
-            // 写入目标CSS文件
-            const targetCssPath = path.resolve(outDir, 'index.css');
-            fs.writeFileSync(targetCssPath, cssContent);
-            
-            console.log(`已复制CSS文件到 ${targetCssPath}`);
+            if (fs.existsSync(sourceCssPath)) {
+              const cssContent = fs.readFileSync(sourceCssPath, 'utf-8');
+              
+              // 写入目标CSS文件
+              const targetCssPath = path.resolve(outDir, 'index.css');
+              fs.writeFileSync(targetCssPath, cssContent);
+              
+              console.log(`已复制CSS文件到 ${targetCssPath}`);
+            }
           }
         }
       }
     ],
+    
+    // CSS处理配置
+    css: {
+      postcss: path.resolve(__dirname, 'postcss.config.cjs'),
+      // 禁用CSS模块化
+      modules: {
+        scopeBehaviour: 'global'
+      }
+    },
     
     // 构建配置
     build: {
