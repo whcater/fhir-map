@@ -11,12 +11,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Vite配置 - VS Code插件Webview部分
  */
 export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production';
+  // 始终使用开发模式来获取更多详细的错误信息
+  const isProd = false; // 强制使用开发模式进行构建
   
   return {
     // 插件配置
     plugins: [
-      react(),
+      // 使用开发版本的React
+      react({
+        // 配置React开发模式
+        jsxRuntime: 'automatic',
+        // 禁用React JSX转换，避免重复属性问题
+        babel: {
+          // 不启用带有__source和__self属性的调试模式
+          plugins: []
+        }
+      }),
       // 自定义插件，确保CSS文件被正确复制到输出目录
       {
         name: 'vscode-copy-css',
@@ -58,10 +68,10 @@ export default defineConfig(({ mode }) => {
     build: {
       // 输出目录
       outDir: 'dist/webview',
-      // 生产环境禁用sourcemap
-      sourcemap: !isProd,
-      // 不压缩代码，为了调试
-      minify: isProd,
+      // 始终启用sourcemap以便调试
+      sourcemap: true,
+      // 禁用代码压缩，以便于调试
+      minify: false,
       // 提取CSS到单独的文件
       cssCodeSplit: false,
       // 配置Rollup打包选项
@@ -82,8 +92,13 @@ export default defineConfig(({ mode }) => {
             }
             return 'assets/[name]-[hash][extname]';
           },
-          // 内联动态导入，避免运行时添加脚本标签
-          inlineDynamicImports: true,
+          // 确保生成一个正确的全局变量
+          format: 'iife',
+          // 显式指定全局变量
+          globals: {
+            'react': 'React',
+            'react-dom': 'ReactDOM'
+          }
         },
       },
       // 预加载所有资源，减少运行时的 DOM 操作
@@ -116,9 +131,11 @@ export default defineConfig(({ mode }) => {
     // 定义环境变量
     define: {
       // 设置生产/开发环境
-      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.NODE_ENV': JSON.stringify('development'), // 强制设置为开发环境
       // 标记为VS Code环境
       'process.env.VSCODE': JSON.stringify(true),
+      // 确保在没有React全局变量时也能工作
+      'global.React': 'React',
     },
     
     // 避免Vite清空控制台信息

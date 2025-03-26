@@ -9,12 +9,21 @@ import path from 'path';
 export default defineConfig(({ mode }) => {
   // 加载环境变量
   const env = loadEnv(mode, process.cwd(), '');
-  const isProd = mode === 'production';
+  // 强制使用开发模式
+  const isProd = false;
 
   return {
     // 插件配置
     plugins: [
-      react(),
+      // 使用开发版本的React用于更好的错误信息
+      react({
+        // 强制使用开发版本的React（仅用于调试）
+        jsxRuntime: 'automatic', // 从classic改为automatic以处理React引用
+        babel: {
+          // 禁用React JSX转换，避免重复属性问题
+          plugins: []
+        }
+      }),
     ],
 
     // 解析配置
@@ -29,22 +38,23 @@ export default defineConfig(({ mode }) => {
       // 输出目录
       outDir: 'dist',
       // 启用源码映射（生产环境可关闭）
-      sourcemap: !isProd,
+      sourcemap: true, // 始终启用源码映射用于调试
       // 自动拆分chunks
       rollupOptions: {
         output: {
-          manualChunks: {
-            // 将React相关库打包到一个chunk
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            // 将其他第三方库打包到一个chunk
-            'vendor': [
-              // 添加你的第三方依赖
-            ],
-          },
+          // 确保生成一个正确的全局变量
+          format: 'iife',
+          // 显式指定全局变量
+          globals: {
+            'react': 'React',
+            'react-dom': 'ReactDOM'
+          }
         },
       },
       // 设置chunk大小警告阈值
       chunkSizeWarningLimit: 1000,
+      // 禁用最小化以便于调试
+      minify: false,
     },
 
     // 开发服务器配置
@@ -61,6 +71,7 @@ export default defineConfig(({ mode }) => {
         'react-dom',
         'react-router-dom',
       ],
+      force: true, // 强制预构建
     },
 
     // 预览配置
@@ -72,7 +83,9 @@ export default defineConfig(({ mode }) => {
     define: {
       // 全局环境变量
       'process.env.APP_VERSION': JSON.stringify(process.env.npm_package_version),
-      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.NODE_ENV': JSON.stringify('development'), // 强制使用开发环境
+      // 确保在没有React全局变量时也能工作
+      'global.React': 'React',
     },
   };
 }); 
