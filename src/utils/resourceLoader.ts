@@ -16,7 +16,7 @@ async function loadVSCodeContext() {
       const module = await import('../../vscode-extension/src/webview/VSCodeContext.js');
       useVSCode = module.useVSCode;
     } catch (error) {
-      console.error('加载VS Code上下文失败:', error);
+      console.error('加载VS Code上下文失败1:', error);
     }
   }
 }

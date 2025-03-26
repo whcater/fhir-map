@@ -41,11 +41,27 @@ export function useTheme(): {
       import('../../vscode-extension/src/webview/VSCodeContext.js').then(module => {
         useVSCode = module.useVSCode;
         
-        // 获取VS Code主题
-        const { theme: vsCodeTheme } = useVSCode();
-        setThemeState(vsCodeTheme);
+        // 在效果钩子内部使用useVSCode，而不是直接调用
+        if (useVSCode) {
+          try {
+            // 创建一个内部函数来安全地使用hook
+            const getVSCodeTheme = () => {
+              console.log('doing useVSCode');
+              const vscodeContext = useVSCode();
+              console.log('vscodeContext', vscodeContext);
+              if (vscodeContext && vscodeContext.theme) {
+                setThemeState(vscodeContext.theme);
+              }
+            };
+            
+            // 调用获取主题函数
+            getVSCodeTheme();
+          } catch (error) {
+            console.error('使用VS Code上下文获取主题失败:', error);
+          }
+        }
       }).catch(err => {
-        console.error('加载VS Code上下文失败:', err);
+        console.error('加载VS Code上下文失败3:', err);
       });
     }
   }, []);

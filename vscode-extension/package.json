@@ -58,8 +58,21 @@
   },
   "dependencies": {
     "@vscode/webview-ui-toolkit": "^1.4.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-regular-svg-icons": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@headlessui/react": "^2.2.0",
+    "@monaco-editor/react": "^4.7.0",
+    "fhir.js": "^0.0.22",
+    "fhirpath": "^3.18.0",
+    "mermaid": "^11.5.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.4.0",
+    "xml2js": "^0.6.2",
+    "zustand": "^5.0.3"
   },
   "type": "module",
   "icon": "./resources/light-icon.png"
