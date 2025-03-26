@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { isVSCodeEnvironment } from '../utils/environment';
+import { postVSCodeMessage } from '../utils/vscode-api';
 
 // 主题类型
 export type Theme = 'light' | 'dark' | 'high-contrast';
@@ -13,9 +14,6 @@ interface VSCodeContextType {
   theme: Theme;
   // 其他属性...
 }
-
-// VS Code钩子引用
-let VSCodeModule: any = null;
 
 /**
  * 通用主题钩子
@@ -29,7 +27,6 @@ export function useTheme(): {
 } {
   // 主题状态
   const [theme, setThemeState] = useState<Theme>('light');
-  const [vsCodeContextLoaded, setVSCodeContextLoaded] = useState(false);
   
   // 首次加载时，尝试从本地存储读取主题
   useEffect(() => {
@@ -41,37 +38,35 @@ export function useTheme(): {
     }
   }, []);
   
-  // 加载VS Code上下文模块（只加载模块，不调用Hook）
+  // 加载VS Code上下文
   useEffect(() => {
-    if (isVSCodeEnvironment() && !VSCodeModule) {
-      // 动态导入VS Code上下文
-      import('../../vscode-extension/src/webview/VSCodeContext.js')
-        .then(module => {
-          // 只存储模块引用，不调用Hook
-          VSCodeModule = module;
-          console.log('VSCodeModule', VSCodeModule);
-          setVSCodeContextLoaded(true);
-        })
-        .catch(err => {
-          console.error('加载VS Code上下文失败3:', err);
-        });
-    }
-  }, []);
-  
-  // 使用加载的VS Code上下文（在模块加载完成后）
-  useEffect(() => {
-    if (isVSCodeEnvironment() && vsCodeContextLoaded && VSCodeModule) {
+    // 由于在VSCode环境中动态导入VSCodeContext会导致React Hook错误，
+    // 这里采用不同的方式处理
+    let isMounted = true;
+    
+    if (isVSCodeEnvironment()) {
+      // 采用替代方案：通过消息机制获取VSCode主题
       try {
-        // 正确地在React组件内部调用useVSCode Hook
-        const vscodeContext = VSCodeModule.useVSCode();
-        if (vscodeContext && vscodeContext.theme) {
-          setThemeState(vscodeContext.theme);
-        }
+        // 使用window.postMessage方法直接与VSCode通信
+        window.addEventListener('message', (event) => {
+          const message = event.data;
+          if (message && message.command === 'themeChanged' && message.theme && isMounted) {
+            setThemeState(message.theme);
+          }
+        });
+        
+        // 请求主题信息，使用全局缓存的VSCode API实例
+        postVSCodeMessage('getTheme');
       } catch (error) {
-        console.error('使用VS Code上下文获取主题失败:', error);
+        console.error('VSCode主题获取失败:', error);
       }
     }
-  }, [vsCodeContextLoaded]);
+    
+    // 清理函数
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // 监听系统主题变化（仅Web环境）
   useEffect(() => {

@@ -5,26 +5,24 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { VSCodeProvider } from './VSCodeContext.js';
-import './vscode-styles.css';
-
-// 获取 vscode webview API
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => {
-      postMessage: (message: any) => void;
-      getState: () => any;
-      setState: (state: any) => void;
-    };
-  }
-}
+import './vscode-styles.css'; 
 
 // 尝试导入应用程序
 // 注意：这里使用动态导入以处理可能的错误
 const initApp = async () => {
   try {
-    // 尝试从上级目录导入主应用
-    // 如果你的应用位于不同位置，请相应地调整路径
-    const { default: App } = await import('../../../src/App.js');
+    // 由于TypeScript无法解析rootDir之外的模块，我们使用非类型化导入方式
+    // @ts-ignore - 忽略TypeScript路径解析错误
+    const App = (await import('../../../src/App.js')).default;
+    // 或者使用备选方案，如果上面的方法仍有问题:
+    // const AppModule = await new Promise<any>((resolve) => {
+    //   // @ts-ignore
+    //   import('../../../src/App.js').then(resolve).catch((err) => {
+    //     console.error('无法导入App模块:', err);
+    //     resolve({ default: null });
+    //   });
+    // });
+    // const App = AppModule.default;
     
     // 获取根元素
     const rootElement = document.getElementById('root');

@@ -1,157 +1,85 @@
 /**
- * VS Code API 桥接
- * 为应用提供与VS Code通信的统一接口，实现单例模式确保API实例唯一
+ * VSCode API 桥接模块
+ * 提供对VS Code API的统一访问，确保只调用一次acquireVsCodeApi
  */
 
 // 声明全局acquireVsCodeApi函数类型
 declare function acquireVsCodeApi(): {
   postMessage(message: any): void;
-  getState(): any;
+  getState<T = any>(): T;
   setState(state: any): void;
 };
 
-/**
- * VS Code Webview API映射到统一接口
- */
-export interface VSCodeAPIInterface {
-  /**
-   * 向VS Code扩展发送消息
-   * @param message 要发送的消息对象
-   */
-  postMessage(message: any): void;
-  
-  /**
-   * 获取存储的状态
-   * @returns 当前存储的状态
-   */
-  getState(): any;
-  
-  /**
-   * 设置状态
-   * @param state 要存储的状态对象
-   */
-  setState(state: any): void;
+// 全局变量标记是否已获取VSCode API
+declare global {
+  interface Window {
+    _vscodeApiAcquired?: boolean;
+    vscodeApiInstance: VSCodeAPI;
+  }
 }
 
+// VS Code API类型定义
+export interface VSCodeAPI {
+  postMessage: (message: any) => void;
+  getState: <T = any>() => T | undefined;
+  setState: (state: any) => void;
+}
+
+// 全局单例实例
+let vscodeApiInstance: VSCodeAPI | undefined;
+
 /**
- * VS Code API包装类，实现单例模式
+ * 获取VS Code API实例
+ * 确保只调用一次acquireVsCodeApi()
  */
-class VSCodeAPI implements VSCodeAPIInterface {
-  private static instance: VSCodeAPI;
-  private vscodeApi: any;
-
-  /**
-   * 私有构造函数，防止外部实例化
-   */
-  private constructor() {
-    // 获取VS Code API实例
-    try {
-      this.vscodeApi = acquireVsCodeApi();
-    } catch (err) {
-      console.error('无法获取VS Code API:', err);
-      // 创建一个模拟的实现用于开发环境
-      this.vscodeApi = this.createMockVSCodeAPI();
-      console.warn('使用模拟的VS Code API');
-    }
+export function getVSCodeAPI(): VSCodeAPI | undefined {
+  // 如果已经初始化，则返回缓存的实例
+  if (vscodeApiInstance) {
+    return vscodeApiInstance;
   }
 
-  /**
-   * 获取VSCodeAPI实例，如果不存在则创建
-   * @returns VSCodeAPI单例实例
-   */
-  public static getInstance(): VSCodeAPI {
-    if (!VSCodeAPI.instance) {
-      VSCodeAPI.instance = new VSCodeAPI();
-    }
-    return VSCodeAPI.instance;
-  }
-
-  /**
-   * 向VS Code扩展发送消息
-   * @param message 要发送的消息对象
-   */
-  public postMessage(message: any): void {
-    try {
-      this.vscodeApi.postMessage(message);
-    } catch (err) {
-      console.error('发送消息到VS Code失败:', err, message);
-    }
-  }
-
-  /**
-   * 获取VS Code扩展存储的状态
-   * @returns 当前存储的状态
-   */
-  public getState<T = any>(): T | undefined {
-    try {
-      return this.vscodeApi.getState();
-    } catch (err) {
-      console.error('获取VS Code状态失败:', err);
+  // 尝试获取VS Code API
+  try {
+    // 检查全局标记，是否已有其他模块获取了VSCode API
+    if (window._vscodeApiAcquired) {
+      console.warn('VSCode API已由其他模块获取，跳过重复调用');
       return undefined;
     }
-  }
 
-  /**
-   * 设置VS Code扩展的状态
-   * @param state 要存储的状态对象
-   */
-  public setState(state: any): void {
-    try {
-      this.vscodeApi.setState(state);
-    } catch (err) {
-      console.error('设置VS Code状态失败:', err, state);
+    if (typeof acquireVsCodeApi === 'function') {
+      // 标记为已获取
+      window._vscodeApiAcquired = true;
+      
+      vscodeApiInstance = acquireVsCodeApi();
+      window.vscodeApiInstance = vscodeApiInstance;
+      console.log('VS Code API实例已获取并缓存');
+    } else {
+      console.warn('acquireVsCodeApi未定义，可能不在VS Code环境中');
     }
+  } catch (error) {
+    console.error('获取VS Code API失败:', error);
   }
 
-  /**
-   * 创建一个模拟的VS Code API实现，用于开发环境
-   * @returns 模拟的VS Code API对象
-   */
-  private createMockVSCodeAPI() {
-    let state: any = {};
-    return {
-      postMessage: (message: any) => {
-        console.log('模拟发送消息到VS Code:', message);
-      },
-      getState: () => {
-        console.log('模拟获取VS Code状态');
-        return state;
-      },
-      setState: (newState: any) => {
-        console.log('模拟设置VS Code状态:', newState);
-        state = { ...newState };
-      }
-    };
-  }
+  return vscodeApiInstance;
 }
 
-/**
- * VS Code API实例
- * 通过此对象与VS Code扩展通信
- */
-export const vscodeApi = VSCodeAPI.getInstance();
+// 尝试获取全局单例
+export const vscodeApi = getVSCodeAPI();
 
 /**
  * 注册消息处理器
- * @param commandId 命令ID
- * @param handler 处理函数
- * @returns 用于取消注册的函数
+ * @param callback 消息处理回调
+ * @returns 取消注册的函数
  */
-export function registerMessageHandler(
-  commandId: string, 
-  handler: (payload?: any) => void
-): () => void {
-  const eventListener = (event: MessageEvent) => {
-    const message = event.data;
-    if (message && message.command === commandId) {
-      handler(message.payload);
-    }
+export function registerMessageHandler(callback: (message: any) => void): () => void {
+  const handler = (event: MessageEvent) => {
+    callback(event.data);
   };
-
-  window.addEventListener('message', eventListener);
   
-  // 返回取消注册的函数
+  window.addEventListener('message', handler);
+  
+  // 返回取消注册函数
   return () => {
-    window.removeEventListener('message', eventListener);
+    window.removeEventListener('message', handler);
   };
 } 

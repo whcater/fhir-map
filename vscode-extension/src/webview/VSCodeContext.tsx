@@ -3,7 +3,13 @@
  * 为React应用提供VS Code环境上下文，包括主题、状态管理等
  */
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { vscodeApi, registerMessageHandler } from './VSCodeBridge.js';
+import { vscodeApi } from './VSCodeBridge.js';
+
+// 尝试使用自定义事件从主应用获取消息
+// 如果vscodeApi为空，我们仍然需要监听事件以获取主题等信息
+if (!vscodeApi) {
+  console.warn('VSCodeContext: vscodeApi为空，将依赖其他模块的API实例');
+}
 
 /**
  * 主题类型
@@ -54,6 +60,19 @@ const defaultContext: VSCodeContextType = {
 // 创建上下文
 const VSCodeContext = createContext<VSCodeContextType>(defaultContext);
 
+// 自定义事件用于处理VSCode API为空的情况
+export const postVSCodeMessageFallback = (command: string, payload?: any): boolean => {
+  try {
+    // 尝试通过window.postMessage向VSCode发送消息
+    // 这种方式可能被主应用的消息处理器捕获
+    window.postMessage({ command, payload }, '*');
+    return true;
+  } catch (error) {
+    console.error('发送消息到VS Code失败(fallback):', error);
+    return false;
+  }
+};
+
 /**
  * VS Code上下文提供者组件
  */
@@ -64,17 +83,24 @@ export const VSCodeProvider: React.FC<{children: React.ReactNode}> = ({ children
   
   // 发送消息到VS Code扩展
   const postMessage = useCallback((command: string, payload?: any) => {
-    vscodeApi.postMessage({ command, payload });
+    if (vscodeApi) {
+      vscodeApi.postMessage({ command, payload });
+    } else {
+      // 使用替代方案发送消息
+      postVSCodeMessageFallback(command, payload);
+    }
   }, []);
   
   // 获取状态
   const getState = useCallback(<T = any>(): T | undefined => {
-    return vscodeApi.getState<T>();
+    return vscodeApi ? vscodeApi.getState<T>() : undefined;
   }, []);
   
   // 设置状态
   const setState = useCallback((state: any) => {
-    vscodeApi.setState(state);
+    if (vscodeApi) {
+      vscodeApi.setState(state);
+    }
   }, []);
   
   // 显示信息通知
