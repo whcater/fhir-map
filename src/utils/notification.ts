@@ -2,32 +2,11 @@
  * 通知服务适配器
  * 在不同环境中提供一致的通知功能
  */
-import { isVSCodeEnvironment } from './environment'; 
-import { getVSCodeAPI } from '../utils/vscode-api';
-
-// VS Code上下文API，延迟加载
-let vscode: any = null;
+import { isVSCodeEnvironment } from './environment';
+import { postVSCodeMessage } from './vscode-api';
 
 // 通知类型
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
-
-/**
- * 加载VS Code上下文
- */
-async function loadVSCodeContext() {
-  if (isVSCodeEnvironment() && !vscode) {
-    try {
-      // const module = await import('../../vscode-extension/src/webview/VSCodeContext.js');
-      // useVSCode = module.useVSCode;
-      vscode = getVSCodeAPI();
-    } catch (error) {
-      console.error('加载VS Code上下文失败2:', error);
-    }
-  }
-}
-
-// 初始化加载
-loadVSCodeContext();
 
 /**
  * 创建Web环境的通知元素
@@ -111,30 +90,29 @@ function getBackgroundColor(type: NotificationType): string {
  */
 export async function showNotification(message: string, type: NotificationType = 'info'): Promise<void> {
   if (isVSCodeEnvironment()) {
-    // 确保VS Code上下文已加载
-    if (!vscode) {
-      await loadVSCodeContext();
-    }
-    console.log('vscode', vscode);
-    if (vscode) {  
-      // 根据类型调用不同的VS Code通知函数
-      switch (type) {
-        case 'info':
-          vscode.showInformationMessage(message);
-          break;
-        case 'warning':
-          vscode.showWarningMessage(message);
-          break;
-        case 'error':
-          vscode.showErrorMessage(message);
-          break;
-        case 'success':
-          vscode.showInformationMessage(message); // VS Code没有success类型，使用info代替
-          break;
-      }
-    } else {
-      // 降级到控制台
-      console.log(`[${type.toUpperCase()}] ${message}`);
+    console.log('notification.ts isVSCodeEnvironment', isVSCodeEnvironment());
+    console.log('notification.ts vscode', type);
+    // 在VS Code环境中，使用VS Code API发送消息
+    switch (type) {
+      case 'info':
+      case 'success': // VS Code没有success类型，使用info代替
+        postVSCodeMessage({
+          command: 'showInformationMessage',
+          text: message
+        });
+        break;
+      case 'warning':
+        postVSCodeMessage({
+          command: 'showWarningMessage',
+          text: message
+        });
+        break;
+      case 'error':
+        postVSCodeMessage({
+          command: 'showErrorMessage',
+          text: message
+        });
+        break;
     }
   } else {
     // Web环境：创建自定义通知

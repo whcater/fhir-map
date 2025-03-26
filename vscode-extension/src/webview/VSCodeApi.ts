@@ -14,11 +14,6 @@ declare global {
       postMessage: (message: any) => void;
       getState: () => any;
       setState: (state: any) => void;
-      showInformationMessage: (message: string) => void;
-      showWarningMessage: (message: string) => void;
-      showErrorMessage: (message: string) => void;
-      onMessage: (callback: (message: any) => void) => () => void;
-      theme: Theme;
     };
   }
 }

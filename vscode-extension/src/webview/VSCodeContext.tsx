@@ -11,28 +11,30 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 
 // 声明全局acquireVsCodeApi函数类型
 declare function acquireVsCodeApi(): {
-  postMessage(message: any, payload?: any): void;
+  postMessage(message: any): void;
   getState<T = any>(): T;
   setState(state: any): void;
-  showInformationMessage: (message: string) => void;
-  showWarningMessage: (message: string) => void;
-  showErrorMessage: (message: string) => void;
-  onMessage: (callback: (message: any) => void) => () => void;
-  theme: Theme;
 };
 
 // 全局变量标记是否已获取VSCode API
 declare global {
   interface Window {
     _vscodeApiAcquired?: boolean;
-    vscodeApiInstance: VSCodeAPI;
+    vscodeApiInstance: any;
   }
 }
 
-// VS Code API类型定义
-export interface VSCodeAPI {  /** 向VS Code扩展发送消息 */
+/**
+ * 主题类型
+ */
+export type Theme = 'light' | 'dark' | 'high-contrast';
+
+/**
+ * VS Code API类型定义
+ */
+export interface VSCodeAPI {
+  /** 向VS Code扩展发送消息 */
   postMessage: (command: string, payload?: any) => void;
-  // postMessage: (message: any) => void; 
   /** 当前VS Code主题 */
   theme: Theme;
   /** 获取VS Code状态 */ 
@@ -50,16 +52,20 @@ export interface VSCodeAPI {  /** 向VS Code扩展发送消息 */
 }
 
 // 全局单例实例
-let vscodeApiInstance: VSCodeAPI | undefined;
+let vscodeRawApi: {
+  postMessage(message: any): void;
+  getState<T = any>(): T;
+  setState(state: any): void;
+} | null = null;
 
 /**
  * 获取VS Code API实例
  * 确保只调用一次acquireVsCodeApi()
  */
-export function getVSCodeAPI(): VSCodeAPI | undefined {
+export function getVSCodeRawAPI() {
   // 如果已经初始化，则返回缓存的实例
-  if (vscodeApiInstance) {
-    return vscodeApiInstance;
+  if (vscodeRawApi) {
+    return vscodeRawApi;
   }
 
   // 尝试获取VS Code API
@@ -67,16 +73,17 @@ export function getVSCodeAPI(): VSCodeAPI | undefined {
     // 检查全局标记，是否已有其他模块获取了VSCode API
     if (window._vscodeApiAcquired) {
       console.warn('VSCode API已由其他模块获取，跳过重复调用');
-      return undefined;
+      return window.vscodeApiInstance;
     }
 
     if (typeof acquireVsCodeApi === 'function') {
       // 标记为已获取
       window._vscodeApiAcquired = true;
       
-      vscodeApiInstance = acquireVsCodeApi();
-      window.vscodeApiInstance = vscodeApiInstance;
+      vscodeRawApi = acquireVsCodeApi();
+      window.vscodeApiInstance = vscodeRawApi;
       console.log('VSCodeContext.ts VS Code API实例已获取并缓存');
+      return vscodeRawApi;
     } else {
       console.warn('acquireVsCodeApi未定义，可能不在VS Code环境中');
     }
@@ -84,11 +91,11 @@ export function getVSCodeAPI(): VSCodeAPI | undefined {
     console.error('获取VS Code API失败:', error);
   }
 
-  return vscodeApiInstance;
+  return null;
 }
 
 // 尝试获取全局单例
-export const vscodeApi = getVSCodeAPI();
+export const vscodeApi = getVSCodeRawAPI();
 
 /**
  * 注册消息处理器
@@ -108,18 +115,10 @@ export function registerMessageHandler(callback: (message: any) => void): () => 
   };
 } 
 
-
-
-// 尝试使用自定义事件从主应用获取消息
 // 如果vscodeApi为空，我们仍然需要监听事件以获取主题等信息
 if (!vscodeApi) {
   console.warn('VSCodeContext: vscodeApi为空，将依赖其他模块的API实例');
 }
-
-/**
- * 主题类型
- */
-export type Theme = 'light' | 'dark' | 'high-contrast';
 
 /**
  * VS Code消息payload类型
@@ -167,7 +166,8 @@ export const VSCodeProvider: React.FC<{children: React.ReactNode}> = ({ children
   // 发送消息到VS Code扩展
   const postMessage = useCallback((command: string, payload?: any) => {
     if (vscodeApi) {
-      vscodeApi.postMessage(command, payload);
+      // VSCode API只接受一个消息对象参数
+      vscodeApi.postMessage({ command, payload });
     } else {
       // 使用替代方案发送消息
       postVSCodeMessageFallback(command, payload);
@@ -176,7 +176,7 @@ export const VSCodeProvider: React.FC<{children: React.ReactNode}> = ({ children
   
   // 获取状态
   const getState = useCallback(<T = any>(): T | undefined => {
-    return vscodeApi ? vscodeApi.getState<T>() : undefined;
+    return vscodeApi ? vscodeApi.getState() : undefined;
   }, []);
   
   // 设置状态
