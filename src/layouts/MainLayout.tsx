@@ -79,8 +79,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
               <ul className="space-y-2">
                 <li>
                   <a 
-                    href="#home" 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => handleNavigate('home')}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <FontAwesomeIcon icon={faHome} className="w-5 h-5 mr-3" />
                     <span>首页</span>
@@ -88,8 +88,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </li>
                 <li>
                   <a 
-                    href="#logic-models" 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => handleNavigate('logic-models')}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <FontAwesomeIcon icon={faDiagramProject} className="w-5 h-5 mr-3" />
                     <span>逻辑模型设计</span>
@@ -97,8 +97,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </li>
                 <li>
                   <a 
-                    href="#visual-models" 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => handleNavigate('visual-models')}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <FontAwesomeIcon icon={faImage} className="w-5 h-5 mr-3" />
                     <span>视觉逻辑模型图</span>
@@ -106,8 +106,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </li>
                 <li>
                   <a 
-                    href="#third-party-models" 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => handleNavigate('third-party-models')}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <FontAwesomeIcon icon={faFileImport} className="w-5 h-5 mr-3" />
                     <span>第三方数据模型</span>
@@ -115,8 +115,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                 </li>
                 <li>
                   <a 
-                    href="#mapping-config" 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => handleNavigate('mapping-config')}
+                    className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                   >
                     <FontAwesomeIcon icon={faCodeBranch} className="w-5 h-5 mr-3" />
                     <span>映射配置</span>
