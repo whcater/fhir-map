@@ -9,12 +9,14 @@ import {
   faSave,
   faUpload,
   faIndent,
-  faList
+  faList,
+  faFileImport
 } from '@fortawesome/free-solid-svg-icons';
 import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
 import { LogicDtoModel, DataDomain, FieldType, FieldMetadata } from '../types';
 import { generateId, generateFieldsFromJson } from '../utils';
+import { showWarning, showSuccess } from '../utils/notification';
 
 // 完整的FieldItem组件
 const FieldItem = ({ field, level = 0, updateField, removeField, addField, addObjectField, addArrayField, getChildFields }: { field: FieldMetadata, level?: number, updateField: (id: string, updates: Partial<FieldMetadata>) => void, removeField: (id: string) => void, addField: (parentId?: string) => void, addObjectField: (parentId?: string) => void, addArrayField: (parentId?: string) => void, getChildFields: (fieldId: string) => FieldMetadata[] }) => {
@@ -173,6 +175,8 @@ const LogicModelPage = () => {
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [modelToDelete, setModelToDelete] = useState<string | null>(null);
 
   // 重置表单
   const resetForm = () => {
@@ -337,14 +341,14 @@ const LogicModelPage = () => {
   // 保存模型
   const saveModel = () => {
     if (!modelName.trim() || !modelDomainId || modelFields.length === 0) {
-      alert('请填写必要信息并至少添加一个字段');
+      showWarning('请填写必要信息并至少添加一个字段');
       return;
     }
 
     // 检查字段是否都有名称
     const invalidFields = modelFields.filter(field => !field.name.trim());
     if (invalidFields.length > 0) {
-      alert('所有字段必须有名称');
+      showWarning('所有字段必须有名称');
       return;
     }
 
@@ -376,13 +380,22 @@ const LogicModelPage = () => {
 
     setIsModalOpen(false);
     resetForm();
+    showSuccess('模型保存成功');
   };
 
   // 删除模型
   const handleDeleteModel = (modelId: string) => {
-    if (confirm('确定要删除此模型吗？')) {
-      deleteLogicDtoModel(modelId);
+    setModelToDelete(modelId);
+    setIsConfirmModalOpen(true);
+  };
+
+  // 确认删除
+  const confirmDelete = () => {
+    if (modelToDelete) {
+      deleteLogicDtoModel(modelToDelete);
+      setModelToDelete(null);
     }
+    setIsConfirmModalOpen(false);
   };
 
   // 根据搜索和筛选条件过滤模型
@@ -680,6 +693,30 @@ const LogicModelPage = () => {
               >
                 <FontAwesomeIcon icon={faSave} className="mr-2" />
                 保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 确认删除模态框 */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">确认删除</h2>
+            <p className="mb-6">确定要删除此模型吗？此操作无法撤销。</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+              >
+                删除
               </button>
             </div>
           </div>

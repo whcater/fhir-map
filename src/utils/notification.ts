@@ -2,10 +2,11 @@
  * 通知服务适配器
  * 在不同环境中提供一致的通知功能
  */
-import { isVSCodeEnvironment } from './environment';
+import { isVSCodeEnvironment } from './environment'; 
+import { getVSCodeAPI } from '../utils/vscode-api';
 
 // VS Code上下文API，延迟加载
-let useVSCode: any = null;
+let vscode: any = null;
 
 // 通知类型
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
@@ -14,10 +15,11 @@ export type NotificationType = 'info' | 'warning' | 'error' | 'success';
  * 加载VS Code上下文
  */
 async function loadVSCodeContext() {
-  if (isVSCodeEnvironment() && !useVSCode) {
+  if (isVSCodeEnvironment() && !vscode) {
     try {
-      const module = await import('../../vscode-extension/src/webview/VSCodeContext.js');
-      useVSCode = module.useVSCode;
+      // const module = await import('../../vscode-extension/src/webview/VSCodeContext.js');
+      // useVSCode = module.useVSCode;
+      vscode = getVSCodeAPI();
     } catch (error) {
       console.error('加载VS Code上下文失败2:', error);
     }
@@ -110,13 +112,11 @@ function getBackgroundColor(type: NotificationType): string {
 export async function showNotification(message: string, type: NotificationType = 'info'): Promise<void> {
   if (isVSCodeEnvironment()) {
     // 确保VS Code上下文已加载
-    if (!useVSCode) {
+    if (!vscode) {
       await loadVSCodeContext();
     }
-    
-    if (useVSCode) {
-      const vscode = useVSCode();
-      
+    console.log('vscode', vscode);
+    if (vscode) {  
       // 根据类型调用不同的VS Code通知函数
       switch (type) {
         case 'info':

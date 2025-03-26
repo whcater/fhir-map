@@ -6,6 +6,7 @@
 // 定义消息处理器类型
 type MessageHandler = (message: any) => void;
 
+export type Theme = 'light' | 'dark' | 'high-contrast';
 // 定义 VS Code API 类型
 declare global {
   interface Window {
@@ -13,6 +14,11 @@ declare global {
       postMessage: (message: any) => void;
       getState: () => any;
       setState: (state: any) => void;
+      showInformationMessage: (message: string) => void;
+      showWarningMessage: (message: string) => void;
+      showErrorMessage: (message: string) => void;
+      onMessage: (callback: (message: any) => void) => () => void;
+      theme: Theme;
     };
   }
 }
@@ -23,6 +29,7 @@ export class VSCodeApi {
 
   constructor() {
     // 获取 VS Code API
+    console.log('VSCodeApi window.acquireVsCodeApi', window.acquireVsCodeApi);
     this.vscode = window.acquireVsCodeApi();
 
     // 监听来自 VS Code 扩展的消息

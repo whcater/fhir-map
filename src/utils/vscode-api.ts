@@ -6,9 +6,14 @@ import { isVSCodeEnvironment } from './environment';
 
 // 声明全局VSCode API函数
 declare function acquireVsCodeApi(): {
-  postMessage(message: any): void;
+  postMessage(message: any, payload?: any): void;
   getState<T = any>(): T;
   setState(state: any): void;
+  showInformationMessage(message: string): void;
+  showWarningMessage(message: string): void;
+  showErrorMessage(message: string): void;
+  onMessage(callback: (message: any) => void): () => void;
+  theme: Theme;
 };
 
 // 全局变量标记是否已获取VSCode API
@@ -21,12 +26,31 @@ declare global {
 }
 
 /**
+ * 主题类型
+ */
+export type Theme = 'light' | 'dark' | 'high-contrast';
+
+/**
  * VSCode API类型定义
  */
 export interface VSCodeAPI {
-  postMessage: (message: any) => void;
+  /** 向VS Code扩展发送消息 */
+  postMessage: (command: string, payload?: any) => void;
+  // postMessage: (message: any) => void; 
+  /** 当前VS Code主题 */
+  theme: Theme;
+  /** 获取VS Code状态 */ 
   getState: <T = any>() => T | undefined;
-  setState: (state: any) => void;
+  /** 设置VS Code状态 */
+  setState: (state: any) => void; 
+  /** 显示信息通知 */
+  showInformationMessage: (message: string) => void;
+  /** 显示警告通知 */
+  showWarningMessage: (message: string) => void;
+  /** 显示错误通知 */
+  showErrorMessage: (message: string) => void;
+  /** 注册消息监听器 */
+  onMessage: (callback: (message: any) => void) => () => void;
 }
 
 // 全局单例实例
@@ -63,7 +87,7 @@ export function getVSCodeAPI(): VSCodeAPI | null {
       
       vscodeApiInstance = acquireVsCodeApi();
       window.vscodeApiInstance = vscodeApiInstance;
-      console.log('VS Code API实例已获取并缓存');
+      console.log('vscode-api.ts VS Code API实例已获取并缓存');
     } else {
       console.warn('acquireVsCodeApi未定义，可能不在VS Code环境中');
     }
@@ -88,7 +112,7 @@ export function postVSCodeMessage(command: string, payload?: any): boolean {
   }
   
   try {
-    api.postMessage({ command, payload });
+    api.postMessage(command, payload);
     return true;
   } catch (error) {
     console.error('发送消息到VS Code失败:', error);

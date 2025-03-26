@@ -83,9 +83,7 @@ export default defineConfig(({ mode }) => {
     define: {
       // 全局环境变量
       'process.env.APP_VERSION': JSON.stringify(process.env.npm_package_version),
-      'process.env.NODE_ENV': JSON.stringify('development'), // 强制使用开发环境
-      // 确保在没有React全局变量时也能工作
-      'global.React': 'React',
+      'process.env.NODE_ENV': JSON.stringify('development')
     },
   };
 }); 
