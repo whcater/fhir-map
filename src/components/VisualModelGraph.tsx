@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 import { LogicDtoModel, FieldMetadata, FieldType } from '../types';
+import { isVSCodeEnvironment } from '../utils/environment';
+import { postVSCodeMessage } from '../utils/vscode-api';
 
 // 为Window扩展类型定义
 declare global {
@@ -8,6 +10,13 @@ declare global {
     resizeTimer?: NodeJS.Timeout;
   }
 }
+
+// 声明VSCode API相关类型
+declare function acquireVsCodeApi(): {
+  postMessage(message: any): void;
+  getState<T = any>(): T;
+  setState(state: any): void;
+};
 
 interface VisualModelGraphProps {
   model: LogicDtoModel;
@@ -250,18 +259,79 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
 
   // 切换全屏
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      // 进入全屏
+    // 检查是否在VSCode环境中运行
+    const isInVSCode = isVSCodeEnvironment();
+    
+    if (isInVSCode) {
+      // 在VSCode中实现自定义伪全屏
+      console.log('containerRef.current?.parentElement', containerRef.current?.parentElement);
       if (containerRef.current?.parentElement) {
-        containerRef.current.parentElement.requestFullscreen().catch(err => {
-          console.error(`全屏错误: ${err.message}`);
-        });
+        const parentElement = containerRef.current.parentElement;
+        const isFullScreenMode = parentElement.classList.contains('pseudo-fullscreen');
+        console.log('isFullScreenMode', isFullScreenMode);
+        if (!isFullScreenMode) {
+          // 保存原始样式以便还原
+          const originalStyles = {
+            position: parentElement.style.position,
+            top: parentElement.style.top,
+            left: parentElement.style.left,
+            right: parentElement.style.right,
+            bottom: parentElement.style.bottom,
+            zIndex: parentElement.style.zIndex,
+            background: parentElement.style.background
+          };
+          
+          // 将原始样式保存为数据属性
+          Object.keys(originalStyles).forEach(key => {
+            parentElement.dataset[`originalStyle${key.charAt(0).toUpperCase() + key.slice(1)}`] = 
+              (originalStyles as any)[key];
+          });
+          
+          // 应用伪全屏样式
+          parentElement.classList.add('pseudo-fullscreen');
+          parentElement.style.position = 'fixed';
+          parentElement.style.top = '0';
+          parentElement.style.left = '0';
+          parentElement.style.right = '0';
+          parentElement.style.bottom = '0';
+          parentElement.style.zIndex = '9999';
+          parentElement.style.background = '#fff'; // 或使用与应用主题匹配的颜色
+          
+          setIsFullscreen(true);
+        } else {
+          // 退出伪全屏，恢复原始样式
+          parentElement.classList.remove('pseudo-fullscreen');
+          
+          // 恢复原始样式
+          Object.keys(parentElement.dataset)
+            .filter(key => key.startsWith('originalStyle'))
+            .forEach(key => {
+              const styleKey = key.replace('originalStyle', '');
+              const normalizedStyleKey = styleKey.charAt(0).toLowerCase() + styleKey.slice(1);
+              parentElement.style[normalizedStyleKey as any] = parentElement.dataset[key] || '';
+              delete parentElement.dataset[key];
+            });
+            
+          setIsFullscreen(false);
+        }
       }
     } else {
-      // 退出全屏
-      document.exitFullscreen().catch(err => {
-        console.error(`退出全屏错误: ${err.message}`);
-      });
+      // 浏览器环境中使用原生全屏API
+      if (!document.fullscreenElement) {
+        // 进入全屏
+        if (containerRef.current?.parentElement) {
+          containerRef.current.parentElement.requestFullscreen().catch(err => {
+            console.error(`全屏错误: ${err.message}`);
+          });
+          setIsFullscreen(true);
+        }
+      } else {
+        // 退出全屏
+        document.exitFullscreen().catch(err => {
+          console.error(`退出全屏错误: ${err.message}`);
+        });
+        setIsFullscreen(false);
+      }
     }
   };
 
@@ -491,6 +561,71 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       </div>
     `;
   };
+
+  useEffect(() => {
+    // 添加伪全屏样式
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .pseudo-fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 9999 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: var(--background-color, white) !important;
+        overflow: hidden !important;
+      }
+      
+      .pseudo-fullscreen .visual-model-container {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        max-height: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      // 清理
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // 添加键盘快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // F11键或ESC键控制全屏
+      if (e.key === 'F11') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'Escape' && isFullscreen) {
+        toggleFullscreen();
+      }
+      
+      // 放大/缩小快捷键
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          adjustScale(true);
+        } else if (e.key === '-') {
+          e.preventDefault();
+          adjustScale(false);
+        } else if (e.key === '0') {
+          e.preventDefault();
+          resetView();
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen, toggleFullscreen, adjustScale, resetView]);
 
   return (
     <div className={`visual-model-graph ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
