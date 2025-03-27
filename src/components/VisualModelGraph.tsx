@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
 import { LogicDtoModel, FieldMetadata, FieldType } from '../types';
 import { isVSCodeEnvironment } from '../utils/environment';
-import { postVSCodeMessage } from '../utils/vscode-api';
+import { useFullscreen } from '../hooks/useFullscreen';
 
 // 为Window扩展类型定义
 declare global {
@@ -10,13 +10,6 @@ declare global {
     resizeTimer?: NodeJS.Timeout;
   }
 }
-
-// 声明VSCode API相关类型
-declare function acquireVsCodeApi(): {
-  postMessage(message: any): void;
-  getState<T = any>(): T;
-  setState(state: any): void;
-};
 
 interface VisualModelGraphProps {
   model: LogicDtoModel;
@@ -27,7 +20,6 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   const containerRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<HTMLDivElement | null>(null);
   const graphId = `graph-${model.id}`;
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [scale, setScale] = useState(100); // 缩放比例，默认100%
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -35,39 +27,18 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   const [spacePressed, setSpacePressed] = useState(false);
   const [lastTouchDistance, setLastTouchDistance] = useState(0);
 
-  // 退出全屏时进行更彻底的清理
-  const forceExitFullscreen = (parentElement: HTMLElement) => {
-    console.log('强制退出全屏状态');
-    
-    // 移除所有相关的类
-    parentElement.classList.remove('pseudo-fullscreen');
-    parentElement.classList.remove('pseudo-fullscreen-exit');
-    parentElement.classList.remove('dark');
-    
-    // 完全清除内联样式
-    parentElement.removeAttribute('style');
-    
-    // 移除数据属性
-    parentElement.removeAttribute('data-original-styles');
-    
-    // 强制触发布局重新计算
-    void parentElement.offsetHeight;
-    
-    // 重新应用正确的主题类名
-    if (theme === 'dark') {
-      parentElement.classList.add('dark:bg-gray-800');
-    } else {
-      parentElement.classList.add('bg-white');
+  // 使用全屏Hook
+  const { isFullscreen, toggleFullscreen } = useFullscreen(
+    containerRef as React.RefObject<HTMLElement>,
+    { 
+      theme,
+      enableKeyboardShortcuts: true,
+      onFullscreenChange: (fullscreen) => {
+        console.log('全屏状态变化:', fullscreen);
+        window.dispatchEvent(new Event('resize'));
+      }
     }
-    
-    // 更新组件状态
-    setIsFullscreen(false);
-    
-    // 触发resize事件
-    window.dispatchEvent(new Event('resize'));
-    
-    console.log('全屏模式已完全重置');
-  };
+  );
 
   // 保存渲染后的Mermaid DOM引用
   const saveMermaidRef = useCallback(() => {
@@ -149,18 +120,6 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       }
     };
   }, [model]);
-
-  // 全屏功能
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
 
   // 空格键和鼠标拖动功能
   useEffect(() => {
@@ -296,142 +255,6 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     // 阻止事件冒泡，避免与容器的双击冲突
     e.stopPropagation();
     toggleFullscreen();
-  };
-
-  // 切换全屏
-  const toggleFullscreen = () => {
-    // 检查是否在VSCode环境中运行
-    const isInVSCode = isVSCodeEnvironment();
-    
-    if (isInVSCode) {
-      // 在VSCode中实现自定义伪全屏
-      console.log('在VSCode环境中切换全屏模式');
-      console.log('当前全屏状态:', isFullscreen);
-      
-      if (containerRef.current?.parentElement) {
-        const parentElement = containerRef.current.parentElement;
-        
-        if (!isFullscreen) {
-          // 进入伪全屏模式
-          console.log('进入伪全屏模式');
-          
-          // 使用getComputedStyle获取计算后的样式，而不是直接读取style属性
-          const computedStyle = window.getComputedStyle(parentElement);
-          
-          // 保存原始样式以便还原
-          const originalStyles = {
-            position: computedStyle.position,
-            top: computedStyle.top,
-            left: computedStyle.left,
-            right: computedStyle.right,
-            bottom: computedStyle.bottom,
-            zIndex: computedStyle.zIndex,
-            background: computedStyle.background,
-            width: computedStyle.width,
-            height: computedStyle.height,
-            overflow: computedStyle.overflow
-          };
-          
-          console.log('保存的原始样式(计算后):', originalStyles);
-          
-          // 将原始样式保存为数据属性
-          parentElement.setAttribute('data-original-styles', JSON.stringify(originalStyles));
-          
-          // 应用伪全屏样式
-          parentElement.classList.add('pseudo-fullscreen');
-          if (theme === 'dark') {
-            parentElement.classList.add('dark');
-          }
-          parentElement.style.position = 'fixed';
-          parentElement.style.top = '0';
-          parentElement.style.left = '0';
-          parentElement.style.right = '0';
-          parentElement.style.bottom = '0';
-          parentElement.style.zIndex = '9999';
-          
-          // 使用VSCode变量设置背景色
-          if (isVSCodeEnvironment()) {
-            parentElement.style.backgroundColor = 'var(--vscode-editor-background)';
-          } else {
-            parentElement.style.background = theme === 'dark' ? '#1e1e1e' : '#ffffff';
-          }
-          
-          parentElement.style.width = '100vw';
-          parentElement.style.height = '100vh';
-          parentElement.style.overflow = 'hidden';
-          
-          setIsFullscreen(true);
-        } else {
-          // 退出伪全屏
-          console.log('退出伪全屏模式');
-          
-          try {
-            // 添加退出动画类
-            parentElement.classList.add('pseudo-fullscreen-exit');
-            
-            // 无论是否有pseudo-fullscreen类，都尝试执行退出全屏的逻辑
-            setTimeout(() => {
-              // 移除类名
-              parentElement.classList.remove('pseudo-fullscreen');
-              parentElement.classList.remove('pseudo-fullscreen-exit');
-              parentElement.classList.remove('dark');
-              
-              // 从数据属性中获取并恢复原始样式
-              const originalStylesStr = parentElement.getAttribute('data-original-styles');
-              console.log('获取到的原始样式字符串:', originalStylesStr);
-              
-              if (originalStylesStr) {
-                try {
-                  const originalStyles = JSON.parse(originalStylesStr);
-                  console.log('解析的原始样式对象:', originalStyles);
-                  
-                  // 应用原始样式
-                  Object.keys(originalStyles).forEach(key => {
-                    parentElement.style[key as any] = originalStyles[key];
-                  });
-                  
-                  // 清除数据属性
-                  parentElement.removeAttribute('data-original-styles');
-                } catch (parseError) {
-                  console.error('解析原始样式JSON出错:', parseError);
-                  forceExitFullscreen(parentElement);
-                }
-              } else {
-                console.error('未找到原始样式数据');
-                // 应用默认样式
-                forceExitFullscreen(parentElement);
-              }
-              
-              setIsFullscreen(false);
-              
-              // 触发resize事件以确保图形正确渲染
-              window.dispatchEvent(new Event('resize'));
-            }, 500); // 增加到500ms以确保有足够时间完成过渡
-          } catch (error) {
-            console.error('退出全屏时发生错误:', error);
-            // 强制重置样式
-            forceExitFullscreen(parentElement);
-          }
-        }
-      }
-    } else {
-      // 浏览器环境中使用原生全屏API
-      if (!document.fullscreenElement) {
-        // 进入全屏
-        if (containerRef.current?.parentElement) {
-          containerRef.current.parentElement.requestFullscreen().catch(err => {
-            console.error(`全屏错误: ${err.message}`);
-          });
-          setIsFullscreen(true);
-        }
-      } else {
-        // 退出全屏
-        document.exitFullscreen().catch(err => {
-          console.error(`退出全屏错误: ${err.message}`);
-        });
-        setIsFullscreen(false);
-      }
-    }
   };
 
   // 调整缩放比例
@@ -584,7 +407,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         diagram += rel + '\n';
       });
       
-      // console.log("生成的Mermaid ER图定义:", diagram);
+      console.log("生成的Mermaid ER图定义:", diagram);
       return diagram;
     } catch (error) {
       console.error("生成Mermaid定义出错:", error);
@@ -607,192 +430,20 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         // 保存渲染后的引用
         saveMermaidRef();
       } catch (mermaidError) {
-        console.error('Mermaid渲染错误，尝试重试:', mermaidError);
+        console.error("Mermaid渲染错误:", mermaidError);
         
-        // 如果是"Could not find a suitable point"错误，等待一会儿再尝试渲染一次
-        if (mermaidError instanceof Error && 
-            mermaidError.message.includes('Could not find a suitable point')) {
-          setTimeout(async () => {
-            try {
-              await mermaid.run();
-              // 保存渲染后的引用
-              saveMermaidRef();
-            } catch (retryError) {
-              // 重试失败，显示错误信息
-              displayError(retryError);
-            }
-          }, 200);
-        } else {
-          // 其他错误直接显示
-          displayError(mermaidError);
-        }
+        // 显示错误信息
+        containerRef.current.innerHTML = `
+          <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
+            <p class="font-semibold mb-2">图表渲染失败</p>
+            <pre class="text-xs overflow-auto max-h-32">${mermaidError instanceof Error ? mermaidError.message : String(mermaidError)}</pre>
+          </div>
+        `;
       }
     } catch (error) {
-      displayError(error);
+      console.error("渲染图表出错:", error);
     }
   };
-  
-  // 显示错误信息的辅助函数
-  const displayError = (error: unknown) => {
-    if (!containerRef.current) return;
-    
-    console.error('渲染视觉模型图出错:', error);
-    
-    // 改进错误处理，提供更详细的错误信息
-    let errorMessage = '未知错误';
-    
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    } else if (typeof error === 'object' && error !== null) {
-      try {
-        errorMessage = JSON.stringify(error, null, 2);
-      } catch {
-        errorMessage = Object.keys(error).map(key => `${key}: ${(error as Record<string, unknown>)[key]}`).join(', ');
-      }
-    } else {
-      errorMessage = String(error);
-    }
-    
-    containerRef.current.innerHTML = `
-      <div class="bg-red-100 dark:bg-red-900 p-4 rounded-md text-red-800 dark:text-red-200">
-        <p class="font-semibold mb-2">渲染视觉模型图时出错</p>
-        <pre class="text-xs overflow-auto max-h-32">${errorMessage}</pre>
-      </div>
-    `;
-  };
-
-  useEffect(() => {
-    // 添加伪全屏样式
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .pseudo-fullscreen {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        z-index: 9999 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: var(--background-color, #ffffff) !important;
-        overflow: hidden !important;
-        transition: all 0.3s ease-in-out !important;
-      }
-      
-      .pseudo-fullscreen.dark {
-        background: var(--background-color-dark, #1e1e1e) !important;
-      }
-      
-      /* VSCode特定样式 */
-      .vscode-light .pseudo-fullscreen {
-        background: var(--vscode-editor-background, #ffffff) !important;
-      }
-      
-      .vscode-dark .pseudo-fullscreen {
-        background: var(--vscode-editor-background, #1e1e1e) !important;
-      }
-      
-      .vscode-high-contrast .pseudo-fullscreen {
-        background: var(--vscode-editor-background, #000000) !important;
-      }
-      
-      .pseudo-fullscreen .visual-model-container {
-        width: 100% !important;
-        height: 100% !important;
-        max-width: none !important;
-        max-height: none !important;
-      }
-      
-      .pseudo-fullscreen-exit {
-        transition: all 0.3s ease-in-out !important;
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      // 清理
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  // 添加全屏状态变化监听
-  useEffect(() => {
-    // 在全屏状态变化时触发UI更新
-    console.log('全屏状态变化:', isFullscreen);
-    
-    // 在全屏状态变化后触发窗口大小调整事件
-    if (containerRef.current) {
-      window.dispatchEvent(new Event('resize'));
-    }
-    
-    // 关联文档标题以指示全屏状态
-    const originalTitle = document.title;
-    if (isFullscreen) {
-      document.title = `${originalTitle} [全屏模式]`;
-    }
-    
-    return () => {
-      // 恢复原始标题
-      document.title = originalTitle;
-    };
-  }, [isFullscreen]);
-
-  // 添加键盘快捷键支持
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // F11键或ESC键控制全屏
-      if (e.key === 'F11') {
-        e.preventDefault();
-        toggleFullscreen();
-      } else if (e.key === 'Escape' && isFullscreen) {
-        toggleFullscreen();
-      }
-      
-      // 放大/缩小快捷键
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === '=' || e.key === '+') {
-          e.preventDefault();
-          adjustScale(true);
-        } else if (e.key === '-') {
-          e.preventDefault();
-          adjustScale(false);
-        } else if (e.key === '0') {
-          e.preventDefault();
-          resetView();
-        }
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyDown);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isFullscreen, toggleFullscreen, adjustScale, resetView]);
-
-  // 确保组件卸载时清理全屏状态
-  useEffect(() => {
-    return () => {
-      // 如果组件在全屏状态下卸载，尝试恢复正常状态
-      if (isFullscreen) {
-        try {
-          const parentElement = containerRef.current?.parentElement;
-          if (parentElement && parentElement.classList.contains('pseudo-fullscreen')) {
-            forceExitFullscreen(parentElement);
-          }
-          
-          // 如果使用的是原生全屏API，尝试退出
-          if (document.fullscreenElement) {
-            document.exitFullscreen().catch(err => {
-              console.error('退出全屏错误:', err);
-            });
-          }
-        } catch (error) {
-          console.error('组件卸载时清理全屏状态出错:', error);
-        }
-      }
-    };
-  }, [isFullscreen]);
 
   // 检测当前全屏状态并输出详细信息
   const debugFullscreenState = () => {
@@ -807,16 +458,16 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       console.log('是否有vscode-dark类:', document.body.classList.contains('vscode-dark'));
     }
     
-    if (containerRef.current?.parentElement) {
-      const parentElement = containerRef.current.parentElement;
-      console.log('DOM元素类名:', parentElement.className);
-      console.log('包含pseudo-fullscreen类?', parentElement.classList.contains('pseudo-fullscreen'));
-      console.log('包含pseudo-fullscreen-exit类?', parentElement.classList.contains('pseudo-fullscreen-exit'));
-      console.log('包含dark类?', parentElement.classList.contains('dark'));
-      console.log('元素样式:', parentElement.getAttribute('style'));
+    if (containerRef.current) {
+      const element = containerRef.current;
+      console.log('DOM元素类名:', element.className);
+      console.log('包含fullscreen-enabled类?', element.classList.contains('fullscreen-enabled'));
+      console.log('包含fullscreen-exit类?', element.classList.contains('fullscreen-exit'));
+      console.log('包含dark类?', element.classList.contains('dark'));
+      console.log('元素样式:', element.getAttribute('style'));
       
       // 获取实际计算样式
-      const computedStyle = window.getComputedStyle(parentElement);
+      const computedStyle = window.getComputedStyle(element);
       console.log('计算后的背景色:', computedStyle.backgroundColor);
       console.log('计算后的背景图像:', computedStyle.backgroundImage);
       
@@ -830,100 +481,17 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         }
       }
       
-      console.log('保存的原始样式:', parentElement.getAttribute('data-original-styles'));
-      
-      // 检测状态一致性
-      const hasFullscreenStyles = (
-        parentElement.style.position === 'fixed' && 
-        parentElement.style.zIndex === '9999'
-      );
-      
-      console.log('DOM状态显示为全屏?', hasFullscreenStyles);
-      console.log('状态是否一致?', isFullscreen === hasFullscreenStyles);
-      console.log('主题是否正确应用?', 
-        (theme === 'dark' && (parentElement.classList.contains('dark') || computedStyle.backgroundColor.includes('33, 33'))) || 
-        (theme === 'light' && (!parentElement.classList.contains('dark') || computedStyle.backgroundColor.includes('255, 255')))
-      );
-      
-      if (isFullscreen !== hasFullscreenStyles) {
-        console.warn('全屏状态与DOM不一致!');
-      }
-      
-      if (isFullscreen && theme === 'dark' && !parentElement.classList.contains('dark')) {
-        console.warn('暗色主题未正确应用!');
-      }
+      console.log('保存的原始样式:', element.getAttribute('data-original-styles'));
     } else {
-      console.log('找不到容器父元素');
+      console.log('找不到容器元素');
     }
     
     console.log('document.fullscreenElement:', document.fullscreenElement);
     console.log('==== 调试信息结束 ====');
   };
-  
-  // 修复可能的全屏状态不一致
-  const fixFullscreenState = () => {
-    if (containerRef.current?.parentElement) {
-      const parentElement = containerRef.current.parentElement;
-      const hasFullscreenStyles = (
-        parentElement.style.position === 'fixed' && 
-        parentElement.style.zIndex === '9999'
-      );
-      
-      if (isFullscreen && !hasFullscreenStyles) {
-        // 状态显示应该全屏，但DOM不是全屏状态
-        console.log('修复状态: 应为全屏但DOM不是全屏');
-        toggleFullscreen();
-      } else if (!isFullscreen && hasFullscreenStyles) {
-        // 状态显示不应全屏，但DOM是全屏状态
-        console.log('修复状态: 不应为全屏但DOM是全屏');
-        forceExitFullscreen(parentElement);
-      } else {
-        console.log('全屏状态一致，无需修复');
-      }
-    }
-  };
-  
-  // 模拟ESC键退出全屏
-  const handleEscKeyExit = () => {
-    console.log('模拟ESC键退出全屏');
-    if (isFullscreen) {
-      toggleFullscreen();
-    }
-  };
-
-  // 监听主题变化
-  useEffect(() => {
-    if (isFullscreen && containerRef.current?.parentElement) {
-      const parentElement = containerRef.current.parentElement;
-      
-      // 移除可能存在的主题类
-      parentElement.classList.remove('dark');
-      
-      // 根据当前主题添加类名
-      if (theme === 'dark') {
-        parentElement.classList.add('dark');
-        parentElement.style.background = '#1e1e1e';
-      } else {
-        parentElement.style.background = '#ffffff';
-      }
-      
-      // 确保背景色立即生效
-      parentElement.style.transition = 'background-color 0.3s ease-in-out';
-      
-      // 在VSCode中，可能需要额外处理
-      if (isVSCodeEnvironment()) {
-        // 尝试应用VSCode的主题颜色
-        if (theme === 'dark') {
-          parentElement.style.backgroundColor = 'var(--vscode-editor-background, #1e1e1e)';
-        } else {
-          parentElement.style.backgroundColor = 'var(--vscode-editor-background, #ffffff)';
-        }
-      }
-    }
-  }, [theme, isFullscreen]);
 
   return (
-    <div className={`visual-model-graph ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
+    <div className="visual-model-graph">
       <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 ${isFullscreen ? 'h-full' : 'overflow-auto'}`}>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-serif font-semibold">逻辑模型视觉图</h3>
@@ -958,7 +526,6 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
             </button>
             <button
               onClick={handleFullscreenButtonClick}
-              onDoubleClick={handleFullscreenButtonClick}
               className="p-1 text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
               title={isFullscreen ? "退出全屏" : "全屏显示"}
             >
@@ -973,40 +540,13 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
               )}
             </button>
             {isFullscreen && (
-              <>
-                <button
-                  onClick={handleEscKeyExit}
-                  className="p-1 text-xs bg-red-200 hover:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 rounded"
-                  title="退出全屏(ESC)"
-                >
-                  ESC
-                </button>
-                <button
-                  onClick={() => {
-                    if (containerRef.current?.parentElement) {
-                      forceExitFullscreen(containerRef.current.parentElement);
-                    }
-                  }}
-                  className="p-1 text-xs bg-orange-200 hover:bg-orange-300 dark:bg-orange-700 dark:hover:bg-orange-600 rounded"
-                  title="强制退出全屏"
-                >
-                  强退
-                </button>
-                <button
-                  onClick={debugFullscreenState}
-                  className="p-1 text-xs bg-purple-200 hover:bg-purple-300 dark:bg-purple-700 dark:hover:bg-purple-600 rounded"
-                  title="调试全屏状态"
-                >
-                  调试
-                </button>
-                <button
-                  onClick={fixFullscreenState}
-                  className="p-1 text-xs bg-green-200 hover:bg-green-300 dark:bg-green-700 dark:hover:bg-green-600 rounded"
-                  title="修复全屏状态"
-                >
-                  修复
-                </button>
-              </>
+              <button
+                onClick={debugFullscreenState}
+                className="p-1 text-xs bg-purple-200 hover:bg-purple-300 dark:bg-purple-700 dark:hover:bg-purple-600 rounded"
+                title="调试全屏状态"
+              >
+                调试
+              </button>
             )}
             <button
               onClick={() => renderGraph()}
