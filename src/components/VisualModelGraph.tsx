@@ -42,6 +42,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     // 移除所有相关的类
     parentElement.classList.remove('pseudo-fullscreen');
     parentElement.classList.remove('pseudo-fullscreen-exit');
+    parentElement.classList.remove('dark');
     
     // 完全清除内联样式
     parentElement.removeAttribute('style');
@@ -51,6 +52,13 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
     
     // 强制触发布局重新计算
     void parentElement.offsetHeight;
+    
+    // 重新应用正确的主题类名
+    if (theme === 'dark') {
+      parentElement.classList.add('dark:bg-gray-800');
+    } else {
+      parentElement.classList.add('bg-white');
+    }
     
     // 更新组件状态
     setIsFullscreen(false);
@@ -331,13 +339,23 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
           
           // 应用伪全屏样式
           parentElement.classList.add('pseudo-fullscreen');
+          if (theme === 'dark') {
+            parentElement.classList.add('dark');
+          }
           parentElement.style.position = 'fixed';
           parentElement.style.top = '0';
           parentElement.style.left = '0';
           parentElement.style.right = '0';
           parentElement.style.bottom = '0';
           parentElement.style.zIndex = '9999';
-          parentElement.style.background = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+          
+          // 使用VSCode变量设置背景色
+          if (isVSCodeEnvironment()) {
+            parentElement.style.backgroundColor = 'var(--vscode-editor-background)';
+          } else {
+            parentElement.style.background = theme === 'dark' ? '#1e1e1e' : '#ffffff';
+          }
+          
           parentElement.style.width = '100vw';
           parentElement.style.height = '100vh';
           parentElement.style.overflow = 'hidden';
@@ -356,6 +374,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
               // 移除类名
               parentElement.classList.remove('pseudo-fullscreen');
               parentElement.classList.remove('pseudo-fullscreen-exit');
+              parentElement.classList.remove('dark');
               
               // 从数据属性中获取并恢复原始样式
               const originalStylesStr = parentElement.getAttribute('data-original-styles');
@@ -655,9 +674,26 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         z-index: 9999 !important;
         width: 100vw !important;
         height: 100vh !important;
-        background: var(--background-color, white) !important;
+        background: var(--background-color, #ffffff) !important;
         overflow: hidden !important;
         transition: all 0.3s ease-in-out !important;
+      }
+      
+      .pseudo-fullscreen.dark {
+        background: var(--background-color-dark, #1e1e1e) !important;
+      }
+      
+      /* VSCode特定样式 */
+      .vscode-light .pseudo-fullscreen {
+        background: var(--vscode-editor-background, #ffffff) !important;
+      }
+      
+      .vscode-dark .pseudo-fullscreen {
+        background: var(--vscode-editor-background, #1e1e1e) !important;
+      }
+      
+      .vscode-high-contrast .pseudo-fullscreen {
+        background: var(--vscode-editor-background, #000000) !important;
       }
       
       .pseudo-fullscreen .visual-model-container {
@@ -762,15 +798,39 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
   const debugFullscreenState = () => {
     console.log('==== 全屏状态调试信息 ====');
     console.log('isFullscreen 状态:', isFullscreen);
+    console.log('当前主题:', theme);
+    console.log('是否在VSCode环境中:', isVSCodeEnvironment());
+    
+    if (document.body) {
+      console.log('文档类名:', document.body.className);
+      console.log('是否有vscode-light类:', document.body.classList.contains('vscode-light'));
+      console.log('是否有vscode-dark类:', document.body.classList.contains('vscode-dark'));
+    }
     
     if (containerRef.current?.parentElement) {
       const parentElement = containerRef.current.parentElement;
       console.log('DOM元素类名:', parentElement.className);
       console.log('包含pseudo-fullscreen类?', parentElement.classList.contains('pseudo-fullscreen'));
       console.log('包含pseudo-fullscreen-exit类?', parentElement.classList.contains('pseudo-fullscreen-exit'));
+      console.log('包含dark类?', parentElement.classList.contains('dark'));
       console.log('元素样式:', parentElement.getAttribute('style'));
+      
+      // 获取实际计算样式
+      const computedStyle = window.getComputedStyle(parentElement);
+      console.log('计算后的背景色:', computedStyle.backgroundColor);
+      console.log('计算后的背景图像:', computedStyle.backgroundImage);
+      
+      // 检查VSCode CSS变量
+      if (isVSCodeEnvironment()) {
+        try {
+          const vscodeBg = getComputedStyle(document.documentElement).getPropertyValue('--vscode-editor-background');
+          console.log('VSCode编辑器背景色变量:', vscodeBg);
+        } catch (e) {
+          console.log('无法获取VSCode CSS变量');
+        }
+      }
+      
       console.log('保存的原始样式:', parentElement.getAttribute('data-original-styles'));
-      console.log('计算样式:', window.getComputedStyle(parentElement));
       
       // 检测状态一致性
       const hasFullscreenStyles = (
@@ -780,9 +840,17 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       
       console.log('DOM状态显示为全屏?', hasFullscreenStyles);
       console.log('状态是否一致?', isFullscreen === hasFullscreenStyles);
+      console.log('主题是否正确应用?', 
+        (theme === 'dark' && (parentElement.classList.contains('dark') || computedStyle.backgroundColor.includes('33, 33'))) || 
+        (theme === 'light' && (!parentElement.classList.contains('dark') || computedStyle.backgroundColor.includes('255, 255')))
+      );
       
       if (isFullscreen !== hasFullscreenStyles) {
         console.warn('全屏状态与DOM不一致!');
+      }
+      
+      if (isFullscreen && theme === 'dark' && !parentElement.classList.contains('dark')) {
+        console.warn('暗色主题未正确应用!');
       }
     } else {
       console.log('找不到容器父元素');
@@ -822,6 +890,37 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
       toggleFullscreen();
     }
   };
+
+  // 监听主题变化
+  useEffect(() => {
+    if (isFullscreen && containerRef.current?.parentElement) {
+      const parentElement = containerRef.current.parentElement;
+      
+      // 移除可能存在的主题类
+      parentElement.classList.remove('dark');
+      
+      // 根据当前主题添加类名
+      if (theme === 'dark') {
+        parentElement.classList.add('dark');
+        parentElement.style.background = '#1e1e1e';
+      } else {
+        parentElement.style.background = '#ffffff';
+      }
+      
+      // 确保背景色立即生效
+      parentElement.style.transition = 'background-color 0.3s ease-in-out';
+      
+      // 在VSCode中，可能需要额外处理
+      if (isVSCodeEnvironment()) {
+        // 尝试应用VSCode的主题颜色
+        if (theme === 'dark') {
+          parentElement.style.backgroundColor = 'var(--vscode-editor-background, #1e1e1e)';
+        } else {
+          parentElement.style.backgroundColor = 'var(--vscode-editor-background, #ffffff)';
+        }
+      }
+    }
+  }, [theme, isFullscreen]);
 
   return (
     <div className={`visual-model-graph ${isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4' : ''}`}>
