@@ -25,3 +25,4 @@
 5. 更新了 index.html 文件，使其更符合 SEO 标准和项目主题
 6. 创建了 manifest.json 文件以支持 PWA 功能
 7. 使用 node generate-images.cjs 自动生成常见的几种图片格式
+

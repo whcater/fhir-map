@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Update changelog.md every time a task is processed
+# Update todo.md every time a task is processed if necessary
+# Update readme.md every time a task is processed if necessary
+ 
