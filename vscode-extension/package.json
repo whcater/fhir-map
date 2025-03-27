@@ -3,11 +3,22 @@
   "displayName": "FHIR Map Designer",
   "description": "FHIR映射逻辑模型设计器",
   "version": "0.0.1",
+  "publisher": "whcater",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whcater/fhir-map.git"
+  },
   "engines": {
     "vscode": "^1.87.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "FHIR",
+    "Medical Health",
+    "Mapping",
+    "Designer"
   ],
   "activationEvents": [],
   "browser": "./dist/web/extension.js",
@@ -20,7 +31,7 @@
       },
       {
         "command": "fhir-map.openFhirMapDesigner",
-        "title": "打开FHIR映射设计器"
+        "title": "FHIR Map Designer"
       }
     ]
   },
@@ -75,5 +86,5 @@
     "zustand": "^5.0.3"
   },
   "type": "module",
-  "icon": "./resources/light-icon.png"
+  "icon": "./resources/fhir-icon.png"
 }

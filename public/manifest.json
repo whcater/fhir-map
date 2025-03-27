@@ -1,0 +1,61 @@
+{
+  "name": "FHIR映射标准逻辑模型设计器",
+  "short_name": "FHIR映射",
+  "description": "高效管理和转换医疗数据结构到FHIR标准的任务管理工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#4285F4",
+  "icons": [
+    {
+      "src": "/images/fhir-map-logo-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fhir-map-logo-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fhir-map-logo-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fhir-map-logo-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fhir-map-logo-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/fhir-map-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "medical", "healthcare", "utilities"],
+  "lang": "zh-CN",
+  "orientation": "any",
+  "shortcuts": [
+    {
+      "name": "新建任务",
+      "short_name": "新建",
+      "description": "创建新的FHIR映射任务",
+      "url": "/new-task",
+      "icons": [{ "src": "/images/fhir-map-logo-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "任务列表",
+      "short_name": "列表",
+      "description": "查看所有FHIR映射任务",
+      "url": "/tasks",
+      "icons": [{ "src": "/images/fhir-map-logo-96.png", "sizes": "96x96" }]
+    }
+  ]
+} 

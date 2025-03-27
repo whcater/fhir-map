@@ -407,7 +407,7 @@ export const VisualModelGraph: React.FC<VisualModelGraphProps> = ({ model, theme
         diagram += rel + '\n';
       });
       
-      console.log("生成的Mermaid ER图定义:", diagram);
+      // console.log("生成的Mermaid ER图定义:", diagram);
       return diagram;
     } catch (error) {
       console.error("生成Mermaid定义出错:", error);

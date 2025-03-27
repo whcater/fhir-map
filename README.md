@@ -47,6 +47,31 @@ src/
 └── utils/         # 工具函数
 ```
 
+## 图像文件管理
+
+项目包含一个 JavaScript 脚本来管理项目中使用的图标和图像文件：
+
+### 生成和复制图像文件
+
+要从 SVG 源文件生成所有 PNG 和 ICO 图像文件，并将它们复制到项目的各个目录，请运行：
+
+```bash
+node generate-images.cjs
+```
+
+这个脚本会：
+
+1. 自动检查并安装所需的 npm 包（sharp 和 png-to-ico）
+2. 从 SVG 源文件生成多种尺寸的 PNG 图像（16x16 到 512x512）
+3. 生成 favicon.ico 文件
+4. 将所有图像文件复制到以下目录：
+   - ./public/images/
+   - ./resources/images/
+   - ./src/assets/images/
+   - ./vscode-extension/resources/images/
+
+> 这个脚本不需要外部依赖如 ImageMagick，只使用 Node.js 和 npm 包。
+
 ## 许可证
 
 MIT

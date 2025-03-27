@@ -1,65 +1,40 @@
-# fhir-map README
+# FHIR Map Designer
 
-This is the README for your extension "fhir-map". After writing up a brief description, we recommend including the following sections.
+FHIR Map Designer 是一个用于创建和编辑FHIR映射逻辑模型的VSCode扩展。通过直观的可视化界面，帮助医疗信息系统开发人员更高效地构建FHIR数据转换映射。
 
-## Features
+## 主要功能
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- 可视化FHIR映射设计器
+- 支持FHIR资源结构浏览
+- 源数据结构到FHIR资源的映射定义
+- 映射逻辑验证与测试
+- 支持导出为标准FHIR映射格式
 
-For example if there is an image subfolder under your extension project workspace:
+## 安装方法
 
-\!\[feature X\]\(images/feature-x.png\)
+从VS Code扩展市场搜索"FHIR Map Designer"安装，或下载VSIX文件后通过"从VSIX安装"选项安装。
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## 使用方法
 
-## Requirements
+1. 安装扩展后，通过命令面板（Ctrl+Shift+P）输入"打开FHIR映射设计器"
+2. 在设计器界面创建新映射或编辑现有映射
+3. 配置源数据和目标FHIR资源结构
+4. 通过拖拽方式建立数据映射关系
+5. 保存并验证映射配置
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## 系统要求
 
-## Extension Settings
+- Visual Studio Code 1.87.0 或更高版本
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## 更新日志
 
-For example:
+### 0.0.1 (初始版本)
 
-This extension contributes the following settings:
+- 基础设计器功能实现
+- 支持基本FHIR资源映射
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## 反馈与支持
 
-## Known Issues
+如有问题或建议，请在GitHub存储库中提交issue。
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**祝使用愉快!**

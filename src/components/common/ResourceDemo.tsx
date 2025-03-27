@@ -21,7 +21,7 @@ const ResourceDemo: React.FC = () => {
     setError(null);
     
     // 尝试加载FHIR图标
-    getResourcePath('fhir-icon.svg')
+    getResourcePath('resource-demo.svg')
       .then(path => {
         setLogoUrl(path);
         setIsLoading(false);
@@ -57,7 +57,7 @@ const ResourceDemo: React.FC = () => {
           
           <p>使用Image组件加载的图像:</p>
           <Image 
-            src="fhir-icon.svg" 
+            src="resource-demo.svg" 
             alt="FHIR图标" 
             width={100} 
             height={100}

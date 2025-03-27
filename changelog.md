@@ -17,3 +17,11 @@
 - 使用CSS类和样式变量提高主题适配性
 - 利用计算样式获取更准确的原始样式
 - 增强了错误处理能力
+
+1. 创建了符合 FHIR 映射主题的 SVG 格式 logo
+2. 创建了各种尺寸的 PNG 版本 logo（16x16, 32x32, 64x64, 96x96, 128x128, 256x256, 512x512）
+3. 创建了 favicon.ico 文件
+4. 将所有图像文件复制到所需的目录（public/images, resources/images, src/assets/images, vscode-extension/resources/images）
+5. 更新了 index.html 文件，使其更符合 SEO 标准和项目主题
+6. 创建了 manifest.json 文件以支持 PWA 功能
+7. 使用 node generate-images.cjs 自动生成常见的几种图片格式
