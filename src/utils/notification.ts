@@ -103,7 +103,7 @@ export async function showNotification(message: string, type: NotificationType =
         break;
       case 'warning':
         postVSCodeMessage({
-          command: 'showWarningMessage',
+          command: 'showErrorMessage',
           text: message
         });
         break;

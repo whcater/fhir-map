@@ -56,7 +56,7 @@ export function useTheme(): {
         });
         
         // 请求主题信息，使用全局缓存的VSCode API实例
-        postVSCodeMessage('getTheme');
+        postVSCodeMessage({ command: 'getTheme' });
       } catch (error) {
         console.error('VSCode主题获取失败:', error);
       }

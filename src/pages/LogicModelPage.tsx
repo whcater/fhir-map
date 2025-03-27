@@ -23,7 +23,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
   const childFields = getChildFields(field.id);
   const isContainer = field.type === FieldType.OBJECT || field.type === FieldType.ARRAY;
   const [isExpanded, setIsExpanded] = useState(level < 1); // 默认展开第一层
-  
+
   const fieldIcon = () => {
     switch (field.type) {
       case FieldType.OBJECT:
@@ -43,7 +43,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
         return null;
     }
   };
-  
+
   return (
     <div
       className="border-l-2 border-gray-200 dark:border-gray-700 mb-1 pl-2 py-1"
@@ -58,7 +58,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
             {fieldIcon()}
           </button>
         )}
-        
+
         <div className="flex-1 grid grid-cols-6 gap-2 items-center">
           <div className="col-span-2 flex items-center">
             {!isContainer && fieldIcon()}
@@ -71,7 +71,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
               required
             />
           </div>
-          
+
           <select
             className="col-span-1 rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-sm bg-white dark:bg-gray-700"
             value={field.type}
@@ -81,7 +81,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
               <option key={type} value={type}>{type}</option>
             ))}
           </select>
-          
+
           <div className="col-span-1 flex items-center">
             <input
               type="checkbox"
@@ -92,7 +92,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
             />
             <label htmlFor={`required-${field.id}`} className="text-xs">必填</label>
           </div>
-          
+
           <input
             type="text"
             className="col-span-2 rounded border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-sm bg-white dark:bg-gray-700"
@@ -101,7 +101,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
             placeholder="描述（可选）"
           />
         </div>
-        
+
         <div className="flex items-center ml-2 space-x-1">
           {isContainer && (
             <>
@@ -137,7 +137,7 @@ const FieldItem = ({ field, level = 0, updateField, removeField, addField, addOb
           </button>
         </div>
       </div>
-      
+
       {isContainer && isExpanded && childFields.length > 0 && (
         <div className="ml-2 mt-1 border-l border-gray-200 dark:border-gray-700 pl-2">
           {childFields.map(childField => (
@@ -297,16 +297,16 @@ const LogicModelPage = () => {
     try {
       setJsonError('');
       const jsonData = JSON.parse(jsonInput);
-      
+
       // 生成字段
       const generatedFields = generateFieldsFromJson(jsonData);
-      
+
       if (generatedFields.length > 0) {
         // 确保字段被正确设置
         setModelFields(prevFields => [...prevFields, ...generatedFields]);
         setIsJsonImportModalOpen(false);
         setJsonInput('');
-        
+
         // 可以添加日志进行调试
         console.log("生成的字段:", generatedFields);
       } else {
@@ -607,6 +607,13 @@ const LogicModelPage = () => {
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-medium">字段定义</h3>
                   <div className="flex space-x-2">
+                    <button
+                      onClick={saveModel}
+                      className="px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-md flex items-center"
+                    >
+                      <FontAwesomeIcon icon={faSave} className="mr-2" />
+                      保存
+                    </button>
                     <button
                       onClick={() => setIsJsonImportModalOpen(true)}
                       className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center text-sm"

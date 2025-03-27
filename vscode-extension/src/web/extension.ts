@@ -8,8 +8,8 @@ let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
 // 获取当前主题
 function getCurrentTheme(): 'light' | 'dark' {
-	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark 
-		|| vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast 
+	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark
+		|| vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
 		? 'dark' : 'light';
 }
 
@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "fhir-map" is now active in the web extension host!');
-	
+
 	// 监听主题变化
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveColorTheme(theme => {
@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.Uri.joinPath(context.extensionUri, 'webview-ui/build'),
 					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'App-*.js'),
 					vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'vendor-*.js')
-				  ],
+				],
 			}
 		);
 
@@ -96,6 +96,9 @@ export function activate(context: vscode.ExtensionContext) {
 					case 'showInformationMessage':
 						vscode.window.showInformationMessage(message.text);
 						return;
+					case 'showWarningMessage':
+						vscode.window.showWarningMessage(message.text);
+						return;
 					case 'showErrorMessage':
 						vscode.window.showErrorMessage(message.text);
 						return;
@@ -119,10 +122,10 @@ export function activate(context: vscode.ExtensionContext) {
 									// 相对路径，从扩展资源目录解析
 									resourceUri = vscode.Uri.joinPath(context.extensionUri, 'resources', message.path);
 								}
-								
+
 								// 转换为Webview可用的URI
 								const webviewResourceUri = currentPanel.webview.asWebviewUri(resourceUri).toString();
-								
+
 								// 返回处理后的资源路径
 								currentPanel.webview.postMessage({
 									command: 'resourcePath',
@@ -164,11 +167,11 @@ function getReactWebviewContent(context: vscode.ExtensionContext, webview: vscod
 	const scriptUri = webview.asWebviewUri(
 		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'index.js')
 	);
-	
+
 	const styleUri = webview.asWebviewUri(
 		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'index.css')
 	);
-	
+
 	return `<!DOCTYPE html>
 	<html lang="zh-CN">
 	<head>
@@ -206,4 +209,4 @@ function getReactWebviewContent(context: vscode.ExtensionContext, webview: vscod
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
