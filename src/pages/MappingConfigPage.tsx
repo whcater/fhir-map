@@ -11,6 +11,7 @@ import MappingControls from '../components/MappingControls';
 import { calculatePathFromToken, findTokenAtPosition } from '../utils/fhirPathUtils';
 import { calculateJsonPathAtPosition, convertJsonPathToFhirPath, EditorPosition } from '../utils/jsonPathUtils';
 import MainLayout from '../layouts/MainLayout';
+import { showSuccess } from '../utils/notification';
 
 // 自定义Ace编辑器位置接口
 interface AcePosition {
@@ -332,7 +333,7 @@ const MappingConfigPage: React.FC = () => {
       updateMappingConfiguration(activeMapping);
     }
 
-    alert('映射配置已保存！');
+    showSuccess('映射配置已保存！');
   };
 
   // 添加字段映射

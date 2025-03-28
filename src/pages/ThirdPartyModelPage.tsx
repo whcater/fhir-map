@@ -17,6 +17,7 @@ import MainLayout from '../layouts/MainLayout';
 import { useAppStore } from '../store';
 import { ThirdPartyModel, DataDomain, FieldType, FieldMetadata } from '../types';
 import { generateId, generateFieldsFromJson, generateFieldsFromXml } from '../utils';
+import { showError, showSuccess } from '../utils/notification';
 
 // 字段项组件
 const FieldItem = ({ 
@@ -337,9 +338,9 @@ const ThirdPartyModelPage = () => {
       setImportText('');
       
       // 显示成功消息
-      alert('已成功解析JSON并生成元数据!');
+      showSuccess('已成功解析JSON并生成元数据!');
     } catch (error) {
-      alert(`解析JSON失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showError(`解析JSON失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
   
@@ -357,9 +358,9 @@ const ThirdPartyModelPage = () => {
       setImportText('');
       
       // 显示成功消息
-      alert('已成功解析XML并生成元数据!');
+      showSuccess('已成功解析XML并生成元数据!');
     } catch (error) {
-      alert(`解析XML失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showError(`解析XML失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
   
@@ -387,19 +388,19 @@ const ThirdPartyModelPage = () => {
   const saveModel = () => {
     // 验证表单
     if (!modelName) {
-      alert('请输入模型名称');
+      showError('请输入模型名称');
       return;
     }
     
     if (!modelDomain) {
-      alert('请选择数据领域');
+      showError('请选择数据领域');
       return;
     }
     
     // 验证字段信息
     for (const field of modelFields) {
       if (!field.name) {
-        alert('所有字段必须有名称');
+        showError('所有字段必须有名称');
         return;
       }
     }
@@ -420,7 +421,7 @@ const ThirdPartyModelPage = () => {
       };
       
       updateThirdPartyModel(updatedModel);
-      alert('第三方数据模型已更新!');
+      showSuccess('第三方数据模型已更新!');
     } else {
       // 创建新模型
       const newModel: ThirdPartyModel = {
@@ -435,7 +436,7 @@ const ThirdPartyModelPage = () => {
       };
       
       addThirdPartyModel(newModel);
-      alert('第三方数据模型已创建!');
+      showSuccess('第三方数据模型已创建!');
     }
     
     // 关闭模态框并重置表单

@@ -4,10 +4,9 @@ const AceEditor = lazy(() => import('react-ace').then(module => {
   // 处理ESM模式下的默认导出问题，优先使用命名导出
   const AceEditorComponent = module.default || module;
   return { default: AceEditorComponent };
-}));
-// 使用命名导入方式导入ace-builds
-import * as ace from 'ace-builds';
+})); 
 import { isVSCodeEnvironment } from '../../utils/environment';
+import { showWarning } from '../../utils/notification';
 
 // 仅在Web环境中使用ESM兼容的解析器
 if (!isVSCodeEnvironment()) {
@@ -212,7 +211,7 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
                     setParsedJson(json);
                     setShowJsonEditor(false);
                   } catch (error) {
-                    alert(`JSON 无效: ${error}`);
+                    showWarning(`JSON 无效: ${error}`);
                   }
                 }}
                 className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
