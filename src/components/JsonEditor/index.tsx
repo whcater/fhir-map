@@ -1,11 +1,33 @@
-import React, { useEffect } from 'react';
-import AceEditor from 'react-ace';
+import React, { useEffect, lazy, Suspense } from 'react';
+// 使用懒加载方式导入AceEditor组件
+const AceEditor = lazy(() => import('react-ace').then(module => {
+  // 处理ESM模式下的默认导出问题，优先使用命名导出
+  const AceEditorComponent = module.default || module;
+  return { default: AceEditorComponent };
+}));
+// 使用命名导入方式导入ace-builds
+import * as ace from 'ace-builds';
+import { isVSCodeEnvironment } from '../../utils/environment';
 
-// 导入所需的Ace编辑器模式和主题
-import 'ace-builds/src-noconflict/mode-json';
-import 'ace-builds/src-noconflict/theme-github';
-import 'ace-builds/src-noconflict/theme-monokai';
-import 'ace-builds/src-noconflict/ext-language_tools';
+// 仅在Web环境中使用ESM兼容的解析器
+if (!isVSCodeEnvironment()) {
+  // 使用我们自定义的ESM兼容解析器，不带扩展名
+  import('../../utils/ace-esm-resolver');
+  
+  // 使用动态导入方式导入所需的模块
+  Promise.all([
+    import('ace-builds/src-noconflict/mode-json'),
+    import('ace-builds/src-noconflict/theme-github'),
+    import('ace-builds/src-noconflict/theme-monokai'),
+    import('ace-builds/src-noconflict/theme-chrome'),
+    import('ace-builds/src-noconflict/ext-language_tools')
+  ]).catch(err => console.error('加载ACE模块时出错:', err));
+} else {
+  // VSCode环境使用不同的加载机制
+  console.log('VSCode环境: 使用VSCode环境特定的Ace配置');
+  // 引入ESM解析器但不执行动态导入操作
+  import('../../utils/ace-esm-resolver');
+}
 
 // 自定义Ace位置接口
 interface AcePosition {
@@ -84,36 +106,38 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
           </button>
         </div>
         <div className="flex-1 overflow-hidden">
-          <AceEditor
-            mode="json"
-            theme={isDarkMode ? 'monokai' : 'github'}
-            value={jsonEditorValue}
-            onChange={(value) => {
-              if (value) {
-                setJsonEditorValue(value);
-                try {
-                  const json = JSON.parse(value);
-                  setParsedJson(json);
-                } catch (error) {
-                  console.error('JSON解析错误:', error);
-                  // 不要将parsedJson设置为null，保持最后一个有效的值
+          <Suspense fallback={<div className="w-full h-full flex items-center justify-center">加载编辑器...</div>}>
+            <AceEditor
+              mode="json"
+              theme={isDarkMode ? 'monokai' : 'github'}
+              value={jsonEditorValue}
+              onChange={(value) => {
+                if (value) {
+                  setJsonEditorValue(value);
+                  try {
+                    const json = JSON.parse(value);
+                    setParsedJson(json);
+                  } catch (error) {
+                    console.error('JSON解析错误:', error);
+                    // 不要将parsedJson设置为null，保持最后一个有效的值
+                  }
                 }
-              }
-            }}
-            name="json-editor-main"
-            width="100%"
-            height="100%"
-            setOptions={{
-              useWorker: false,
-              showLineNumbers: true,
-              tabSize: 2,
-              showPrintMargin: false,
-              readOnly: false,
-              fontSize: 13
-            }}
-            editorProps={{ $blockScrolling: true }}
-            onLoad={editorDidMount}
-          />
+              }}
+              name="json-editor-main"
+              width="100%"
+              height="100%"
+              setOptions={{
+                useWorker: false,
+                showLineNumbers: true,
+                tabSize: 2,
+                showPrintMargin: false,
+                readOnly: false,
+                fontSize: 13
+              }}
+              editorProps={{ $blockScrolling: true }}
+              onLoad={editorDidMount}
+            />
+          </Suspense>
         </div>
       </div>
     );
@@ -138,37 +162,39 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
           
           <div className="flex-1 p-4 flex flex-col">
             <div className="flex-1 border border-gray-300 dark:border-gray-600">
-              <AceEditor
-                mode="json"
-                theme={isDarkMode ? 'monokai' : 'github'}
-                value={jsonEditorValue}
-                onChange={(value) => {
-                  if (value) {
-                    setJsonEditorValue(value);
-                    try {
-                      const json = JSON.parse(value);
-                      setParsedJson(json);
-                    } catch (error) {
-                      console.error('对话框JSON解析错误:', error);
-                      // 不要将parsedJson设置为null
+              <Suspense fallback={<div className="w-full h-full flex items-center justify-center">加载编辑器...</div>}>
+                <AceEditor
+                  mode="json"
+                  theme={isDarkMode ? 'monokai' : 'github'}
+                  value={jsonEditorValue}
+                  onChange={(value) => {
+                    if (value) {
+                      setJsonEditorValue(value);
+                      try {
+                        const json = JSON.parse(value);
+                        setParsedJson(json);
+                      } catch (error) {
+                        console.error('对话框JSON解析错误:', error);
+                        // 不要将parsedJson设置为null
+                      }
                     }
-                  }
-                }}
-                name="json-editor-dialog"
-                width="100%"
-                height="100%"
-                setOptions={{
-                  useWorker: false,
-                  showLineNumbers: true,
-                  tabSize: 2,
-                  showPrintMargin: false,
-                  enableBasicAutocompletion: true,
-                  enableLiveAutocompletion: true,
-                  fontSize: 14
-                }}
-                editorProps={{ $blockScrolling: true }}
-                onLoad={editorDidMount}
-              />
+                  }}
+                  name="json-editor-dialog"
+                  width="100%"
+                  height="100%"
+                  setOptions={{
+                    useWorker: false,
+                    showLineNumbers: true,
+                    tabSize: 2,
+                    showPrintMargin: false,
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    fontSize: 14
+                  }}
+                  editorProps={{ $blockScrolling: true }}
+                  onLoad={editorDidMount}
+                />
+              </Suspense>
             </div>
             
             <div className="mt-6 flex justify-end">

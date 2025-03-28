@@ -30,6 +30,10 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),
+        // 处理react-ace导入问题
+        'react-ace': path.resolve(__dirname, 'node_modules/react-ace'),
+        // 处理ace-builds导入问题
+        'ace-builds': path.resolve(__dirname, 'node_modules/ace-builds'),
       },
     },
 
@@ -47,9 +51,14 @@ export default defineConfig(({ mode }) => {
           // 显式指定全局变量
           globals: {
             'react': 'React',
-            'react-dom': 'ReactDOM'
-          }
+            'react-dom': 'ReactDOM',
+            'ace-builds': 'ace',
+            'react-ace': 'ReactAce'
+          },
+          // 移除manualChunks配置，因为它与inlineDynamicImports冲突
         },
+        // 将Ace作为外部依赖，不打包进bundle
+        external: ['ace-builds']
       },
       // 设置chunk大小警告阈值
       chunkSizeWarningLimit: 1000,
@@ -70,8 +79,22 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
+        // 强制预构建ace相关包
+        'ace-builds',
+        'react-ace',
+        'ace-builds/src-noconflict/mode-json',
+        'ace-builds/src-noconflict/theme-github',
+        'ace-builds/src-noconflict/theme-monokai',
+        'ace-builds/src-noconflict/ext-language_tools',
       ],
+      // 排除Ace编辑器相关模块，使用外部提供的版本
+      exclude: [],
       force: true, // 强制预构建
+      // 处理CommonJS模块
+      esbuildOptions: {
+        // 在预构建时保留require语法
+        define: { global: 'globalThis' },
+      },
     },
 
     // 预览配置
