@@ -6,6 +6,7 @@ import ThirdPartyModelPage from './pages/ThirdPartyModelPage'
 import MappingConfigPage from './pages/MappingConfigPage'
 import { isVSCodeEnvironment } from './utils/environment'
 import { useTheme } from './hooks/useTheme'
+import useAceEnvironment from './hooks/useAceEnvironment'
 import './index.css'
 import './styles/theme.css'
 
@@ -41,6 +42,9 @@ function App() {
     document.body.classList.toggle('vscode-env', isVSCodeEnvironment())
     document.body.classList.toggle('web-env', !isVSCodeEnvironment())
   }, [theme])
+
+  // 初始化Ace编辑器环境
+  useAceEnvironment()
 
   const renderPage = () => {
     switch (currentPage) {

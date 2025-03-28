@@ -163,47 +163,83 @@ export function activate(context: vscode.ExtensionContext) {
  * 获取加载 React 应用的 webview HTML 内容
  */
 function getReactWebviewContent(context: vscode.ExtensionContext, webview: vscode.Webview): string {
-	// 创建对资源的引用
+	// 获取本地资源的URI
+	const stylesUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'index.css')
+	);
+	
+	// 主应用JS文件路径
 	const scriptUri = webview.asWebviewUri(
-		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'index.js')
+		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'assets', 'index.js')
+	);
+	
+	// 确保Ace Editor资源路径可用
+	const aceResourcesUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds')
 	);
 
-	const styleUri = webview.asWebviewUri(
-		vscode.Uri.joinPath(context.extensionUri, 'dist', 'webview', 'index.css')
+	// Ace核心脚本和必要模式
+	const aceScriptUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds', 'src-noconflict', 'ace.js')
 	);
-
+	const aceJsonModeUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds', 'src-noconflict', 'mode-json.js')
+	);
+	const aceThemeGithubUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds', 'src-noconflict', 'theme-github.js')
+	);
+	const aceThemeMonokaiUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds', 'src-noconflict', 'theme-monokai.js')
+	);
+	const aceExtLanguageToolsUri = webview.asWebviewUri(
+		vscode.Uri.joinPath(context.extensionUri, 'resources', 'ace-builds', 'src-noconflict', 'ext-language_tools.js')
+	);
+	
+	// 设置内容安全策略
+	// 注意：我们需要适当地扩展CSP以允许Ace Editor的脚本和工作器
+	const csp = `
+		default-src 'none';
+		style-src ${webview.cspSource} 'unsafe-inline';
+		script-src ${webview.cspSource} 'unsafe-eval';
+		font-src ${webview.cspSource};
+		img-src ${webview.cspSource} data:;
+		connect-src ${webview.cspSource};
+		worker-src blob:;
+	`;
+	
 	return `<!DOCTYPE html>
 	<html lang="zh-CN">
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="Content-Security-Policy" content="
-			default-src 'self' ${webview.cspSource};
-			script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval' blob:;
-			style-src ${webview.cspSource} 'unsafe-inline';
-			img-src ${webview.cspSource} https: data: blob:;
-			font-src ${webview.cspSource} https: data:;
-			connect-src ${webview.cspSource} https:;
-			child-src ${webview.cspSource} 'self' blob:;
-			worker-src blob: ${webview.cspSource};
-			manifest-src 'self';
-			media-src ${webview.cspSource} https:;
-		">
-		<title>FHIR 映射逻辑模型设计器</title>
-		<link href="${styleUri}" rel="stylesheet" />
+		<meta http-equiv="Content-Security-Policy" content="${csp}">
+		<title>FHIR映射逻辑模型设计器</title>
+		<link rel="stylesheet" type="text/css" href="${stylesUri}">
+		
+		<!-- 预加载Ace Editor资源 -->
+		<script src="${aceScriptUri}"></script>
+		<script src="${aceJsonModeUri}"></script>
+		<script src="${aceThemeGithubUri}"></script>
+		<script src="${aceThemeMonokaiUri}"></script>
+		<script src="${aceExtLanguageToolsUri}"></script>
+		
+		<script>
+			// VSCode API初始化
+			const vscode = acquireVsCodeApi();
+			
+			// 设置VSCode环境标识
+			window.VSCODE_EDITOR_ENV = true;
+			
+			// 为Ace Editor提供资源路径
+			window.ACE_RESOURCES_PATH = '${aceResourcesUri.toString()}';
+			
+			// 确保全局ace变量可用
+			window.ace = ace;
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>
 		<script type="module" src="${scriptUri}"></script>
-		<!-- 添加一个调试信息 -->
-		<script>
-			console.log('WebView 已加载，正在尝试初始化 React 应用...');
-			window.onerror = function(message, source, lineno, colno, error) {
-				console.error('WebView 错误:', message, 'at', source, lineno, colno);
-				document.getElementById('root').innerHTML = '<div style="color:var(--vscode-errorForeground);padding:20px;"><h2>加载错误</h2><p>' + message + '</p><p>位置: ' + source + ':' + lineno + ':' + colno + '</p></div>';
-				return true;
-			};
-		</script>
 	</body>
 	</html>`;
 }

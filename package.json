@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:all": "npm run build && cd vscode-extension && npm run build",
-    "build:prod": "npm run build -- --mode production && cd vscode-extension && npm run build:prod",
+    "build:all": "npm run copy-ace-resources && npm run build && cd vscode-extension && npm run build",
+    "build:prod": "npm run copy-ace-resources && npm run build -- --mode production && cd vscode-extension && npm run build:prod",
     "lint": "eslint .",
     "preview": "vite preview",
     "dev:extension": "cd vscode-extension && npm run dev",
-    "dev:all": "npm-run-all --parallel dev dev:extension"
+    "dev:all": "npm run copy-ace-resources && npm-run-all --parallel dev dev:extension",
+    "copy-ace-resources": "node copy-ace-resources.cjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",

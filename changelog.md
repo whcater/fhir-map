@@ -1,5 +1,14 @@
 # Change Log
 
+## 2025年3月29日
+修复了VSCode扩展环境下Ace Editor加载错误问题。
+主要改进包括：
+1. 修改了JsonEditor组件，使其在VSCode环境中使用直接脚本引用而非webpack-resolver
+2. 更新了useAceEnvironment钩子中VSCode环境的判断逻辑和资源路径设置
+3. 修改了VSCode扩展的HTML生成函数，确保预加载所有必要的Ace Editor脚本
+4. 更新了Vite构建配置，将Ace Editor作为外部依赖处理
+5. 解决了"Uncaught ReferenceError: require$$0$1 is not defined"的错误
+
 ## 2025年3月28日
 将Monaco编辑器替换为Ace编辑器，提升编辑器性能和可维护性。
 主要改进包括：

@@ -1,4 +1,4 @@
-# Monaco编辑器与VSCode扩展集成指南
+# Monaco编辑器与VSCode扩展集成指南 (弃用monaco)
 
 ## 问题描述
 
