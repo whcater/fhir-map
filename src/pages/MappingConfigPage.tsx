@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, RefObject } from 'react';
 import { useAppStore } from '../store';
 import { MappingConfiguration, LogicDtoModel, FieldMetadata, FieldMapping, ThirdPartyModel, DataDomain } from '../types';
 import { nanoid } from 'nanoid';
-import * as monaco from 'monaco-editor';
-import { Monaco, OnMount } from '@monaco-editor/react';
 import * as fhirpath from 'fhirpath';
 import FhirPathBuilder from '../components/FhirPathBuilder';
 import JsonEditor from '../components/JsonEditor';
@@ -11,8 +9,14 @@ import LogicModelViewer from '../components/LogicModelViewer';
 import PathCalculator from '../components/PathCalculator';
 import MappingControls from '../components/MappingControls';
 import { calculatePathFromToken, findTokenAtPosition } from '../utils/fhirPathUtils';
-import { calculateJsonPathAtPosition, convertJsonPathToFhirPath } from '../utils/jsonPathUtils';
+import { calculateJsonPathAtPosition, convertJsonPathToFhirPath, EditorPosition } from '../utils/jsonPathUtils';
 import MainLayout from '../layouts/MainLayout';
+
+// 自定义Ace编辑器位置接口
+interface AcePosition {
+  row: number;
+  column: number;
+}
 
 const MappingConfigPage: React.FC = () => {
   const {
@@ -57,13 +61,12 @@ const MappingConfigPage: React.FC = () => {
     { type: 'Composition', example: 'Composition.section[0].title' }
   ]);
 
-  // 添加Monaco编辑器的引用
-  const monacoEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
+  // 添加Ace编辑器的引用
+  const aceEditorRef = useRef<any>(null);
 
   // FHIR路径计算函数 - 根据位置计算路径
-  const calculateFhirPathAtPosition = (position: monaco.Position): string => {
-    if (!monacoEditorRef.current) {
+  const calculateFhirPathAtPosition = (position: AcePosition): string => {
+    if (!aceEditorRef.current) {
       console.log('编辑器引用不可用');
       return '';
     }
@@ -71,15 +74,12 @@ const MappingConfigPage: React.FC = () => {
     if (!parsedJson) {
       console.log('parsedJson为null，尝试从编辑器内容重新解析');
       try {
-        const editorModel = monacoEditorRef.current.getModel();
-        if (editorModel) {
-          const text = editorModel.getValue();
-          const json = JSON.parse(text);
-          // 异步更新parsedJson
-          setTimeout(() => setParsedJson(json), 0);
-          // 继续使用临时解析的JSON
-          return calculatePathWithJson(position, json);
-        }
+        const text = aceEditorRef.current.getValue();
+        const json = JSON.parse(text);
+        // 异步更新parsedJson
+        setTimeout(() => setParsedJson(json), 0);
+        // 继续使用临时解析的JSON
+        return calculatePathWithJson(position, json);
       } catch (error) {
         console.error('临时解析JSON失败:', error);
       }
@@ -90,20 +90,18 @@ const MappingConfigPage: React.FC = () => {
   };
 
   // 辅助函数 - 使用特定的JSON对象计算路径
-  const calculatePathWithJson = (position: monaco.Position, json: any): string => {
-    if (!monacoEditorRef.current) return '';
-
-    const editorModel = monacoEditorRef.current.getModel();
-    if (!editorModel) {
-      console.log('编辑器模型不可用');
-      return '';
-    }
+  const calculatePathWithJson = (position: AcePosition, json: any): string => {
+    if (!aceEditorRef.current) return '';
 
     try {
-      // 尝试使用FHIR Path计算方式
-      const lineContent = editorModel.getLineContent(position.lineNumber);
+      // 获取行内容
+      const session = aceEditorRef.current.getSession();
+      const lineContent = session.getLine(position.row);
       console.log('lineContent', lineContent);
-      const token = findTokenAtPosition(lineContent, position.column);
+      
+      // 在Ace编辑器中，column是从0开始的，而monaco是从1开始
+      // 所以这里我们需要+1来保持和以前的计算方式一致
+      const token = findTokenAtPosition(lineContent, position.column + 1);
 
       if (!token) return '';
 
@@ -115,8 +113,15 @@ const MappingConfigPage: React.FC = () => {
       // 使用JSON Path作为备选
       try {
         // 获取整个文本
-        const text = editorModel.getValue();
-        const jsonPath = calculateJsonPathAtPosition(json, position, text);
+        const text = aceEditorRef.current.getValue();
+        
+        // 将Ace Position转换为类似Monaco Position的结构
+        const editorPosition: EditorPosition = {
+          lineNumber: position.row + 1,  // 转为1-based
+          column: position.column + 1    // 转为1-based
+        };
+        
+        const jsonPath = calculateJsonPathAtPosition(json, editorPosition, text);
 
         // 将JSON Path转换为FHIR Path
         return convertJsonPathToFhirPath(jsonPath, json);
@@ -128,49 +133,22 @@ const MappingConfigPage: React.FC = () => {
   };
 
   // 编辑器初始化时的处理函数
-  const handleEditorDidMount: OnMount = (editor, monaco) => {
-    monacoEditorRef.current = editor;
-    monacoRef.current = monaco;
-
-    // 设置编辑器主题
-    monaco.editor.defineTheme('fhirTheme', {
-      base: isDarkMode ? 'vs-dark' : 'vs',
-      inherit: true,
-      rules: [],
-      colors: {}
-    });
-    monaco.editor.setTheme('fhirTheme');
-
-    // 添加鼠标移动事件监听，用于路径计算
-    // editor.onMouseMove((e) => {
-    //   if (e.target.position) {
-    //     const position = e.target.position;
-    //     try {
-    //       const path = calculateFhirPathAtPosition(position);
-    //       if (path) {
-    //         setHoveredPath(path);
-    //       }
-    //     } catch (error) {
-    //       console.error('计算FHIR路径时出错:', error);
-    //     }
-    //   }
-    // });
+  const handleEditorDidMount = (editor: any) => {
+    aceEditorRef.current = editor;
 
     // 添加点击事件监听
-    editor.onMouseDown((e) => {
-      if (e.target.position) {
-        const position = e.target.position;
-        try {
-          const path = calculateFhirPathAtPosition(position);
-          if (path) {
-            setSelectedPath(path);
-            if (pathInputRef.current) {
-              pathInputRef.current.value = path;
-            }
+    editor.on('click', () => {
+      const position = editor.getCursorPosition();
+      try {
+        const path = calculateFhirPathAtPosition(position);
+        if (path) {
+          setSelectedPath(path);
+          if (pathInputRef.current) {
+            pathInputRef.current.value = path;
           }
-        } catch (error) {
-          console.error('计算FHIR路径时出错:', error);
         }
+      } catch (error) {
+        console.error('计算FHIR路径时出错:', error);
       }
     });
 
@@ -185,8 +163,8 @@ const MappingConfigPage: React.FC = () => {
 
   // 当isDarkMode变化时，更新编辑器主题
   useEffect(() => {
-    if (monacoRef.current) {
-      monacoRef.current.editor.setTheme(isDarkMode ? 'vs-dark' : 'vs');
+    if (aceEditorRef.current) {
+      aceEditorRef.current.setTheme(isDarkMode ? 'ace/theme/monokai' : 'ace/theme/chrome');
     }
   }, [isDarkMode]);
 
@@ -326,53 +304,18 @@ const MappingConfigPage: React.FC = () => {
 
   // FHIR Path智能获取函数
   const handleGetPathFromCursor = () => {
-    // 获取当前选择的行号
-    const selection = window.getSelection();
-    if (!selection || !jsonEditorRef.current) return;
-
-    // 确定选中的节点
-    const range = selection.getRangeAt(0);
-    const selectedNode = range.startContainer.parentNode;
-
-    // 查找最近的行元素
-    let lineElement = selectedNode as HTMLElement | null;
-    while (lineElement && !lineElement.getAttribute('data-line-number')) {
-      const parentElement = lineElement.parentNode as HTMLElement;
-      if (parentElement === jsonEditorRef.current) {
-        lineElement = null;
-        break;
-      }
-      lineElement = parentElement;
-    }
-
-    if (lineElement) {
-      const lineNumber = parseInt(lineElement.getAttribute('data-line-number') || '0', 10);
-
-      // 查找此行的FHIR Path或最近的有效路径
-      let path = '';
-      if (jsonPathMap.has(lineNumber)) {
-        path = jsonPathMap.get(lineNumber) || '';
-      } else {
-        // 向上查找最近的路径
-        for (let i = lineNumber; i >= 0; i--) {
-          if (jsonPathMap.has(i)) {
-            path = jsonPathMap.get(i) || '';
-            break;
+    if (aceEditorRef.current) {
+      try {
+        const position = aceEditorRef.current.getCursorPosition();
+        const path = calculateFhirPathAtPosition(position);
+        if (path) {
+          setSelectedPath(path);
+          if (pathInputRef.current) {
+            pathInputRef.current.value = path;
           }
         }
-      }
-
-      if (path) {
-        setSelectedPath(path);
-        if (pathInputRef.current) {
-          pathInputRef.current.value = path;
-        }
-      }
-    } else if (hoveredPath) {
-      // 回退到悬停路径
-      setSelectedPath(hoveredPath);
-      if (pathInputRef.current) {
-        pathInputRef.current.value = hoveredPath;
+      } catch (error) {
+        console.error('获取光标路径时出错:', error);
       }
     }
   };
@@ -448,7 +391,7 @@ const MappingConfigPage: React.FC = () => {
   };
 
   // 处理编辑器光标位置变化
-  const handleCursorPositionChange = (position: monaco.Position) => {
+  const handleCursorPositionChange = (position: AcePosition) => {
     try {
       // 首先确保parsedJson已初始化
       if (!parsedJson) {

@@ -1,16 +1,27 @@
 import React, { useEffect } from 'react';
-import Editor, { Monaco, OnMount } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor';
+import AceEditor from 'react-ace';
+
+// 导入所需的Ace编辑器模式和主题
+import 'ace-builds/src-noconflict/mode-json';
+import 'ace-builds/src-noconflict/theme-github';
+import 'ace-builds/src-noconflict/theme-monokai';
+import 'ace-builds/src-noconflict/ext-language_tools';
+
+// 自定义Ace位置接口
+interface AcePosition {
+  row: number;
+  column: number;
+}
 
 interface JsonEditorProps {
   jsonEditorValue: string;
   setJsonEditorValue: (value: string) => void;
   setParsedJson: (json: any) => void;
   isDarkMode: boolean;
-  handleEditorDidMount: OnMount;
+  handleEditorDidMount: (editor: any) => void;
   showJsonEditor: boolean;
   setShowJsonEditor: (show: boolean) => void;
-  onCursorPositionChange?: (position: monaco.Position) => void;
+  onCursorPositionChange?: (position: AcePosition) => void;
 }
 
 const JsonEditor: React.FC<JsonEditorProps> = ({
@@ -36,12 +47,12 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
   }, []);
 
   // 自定义editor did mount处理，添加光标位置监听
-  const customEditorDidMount: OnMount = (editor, monaco) => {
+  const editorDidMount = (editor: any) => {
     // 先调用原来的handleEditorDidMount处理初始化
-    handleEditorDidMount(editor, monaco);
+    handleEditorDidMount(editor);
     
     // 添加光标位置变化监听
-    editor.onDidChangeCursorPosition(e => {
+    editor.selection.on('changeCursor', () => {
       // 确保每次光标移动时JSON已被解析
       try {
         const currentValue = editor.getValue();
@@ -49,8 +60,9 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
         setParsedJson(json);
         
         if (onCursorPositionChange) {
-          console.log('光标位置变化', e.position);
-          onCursorPositionChange(e.position);
+          const position = editor.selection.getCursor();
+          console.log('光标位置变化', position);
+          onCursorPositionChange(position);
         }
       } catch (error) {
         console.error('光标移动时JSON解析错误:', error);
@@ -72,9 +84,9 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
           </button>
         </div>
         <div className="flex-1 overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage="json"
+          <AceEditor
+            mode="json"
+            theme={isDarkMode ? 'monokai' : 'github'}
             value={jsonEditorValue}
             onChange={(value) => {
               if (value) {
@@ -88,26 +100,26 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
                 }
               }
             }}
-            options={{
-              minimap: { enabled: false },
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              wrappingIndent: 'deepIndent',
-              automaticLayout: true,
-              fontSize: 13,
-              formatOnPaste: true,
-              readOnly: false
+            name="json-editor-main"
+            width="100%"
+            height="100%"
+            setOptions={{
+              useWorker: false,
+              showLineNumbers: true,
+              tabSize: 2,
+              showPrintMargin: false,
+              readOnly: false,
+              fontSize: 13
             }}
-            onMount={customEditorDidMount}
-            theme={isDarkMode ? 'vs-dark' : 'vs'}
+            editorProps={{ $blockScrolling: true }}
+            onLoad={editorDidMount}
           />
         </div>
       </div>
     );
   };
   
-  // 更新JSON编辑器对话框使用Monaco编辑器
+  // 更新JSON编辑器对话框使用Ace编辑器
   const renderJsonEditorDialog = () => {
     if (!showJsonEditor) return null;
     
@@ -126,9 +138,9 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
           
           <div className="flex-1 p-4 flex flex-col">
             <div className="flex-1 border border-gray-300 dark:border-gray-600">
-              <Editor
-                height="100%"
-                defaultLanguage="json"
+              <AceEditor
+                mode="json"
+                theme={isDarkMode ? 'monokai' : 'github'}
                 value={jsonEditorValue}
                 onChange={(value) => {
                   if (value) {
@@ -142,18 +154,20 @@ const JsonEditor: React.FC<JsonEditorProps> = ({
                     }
                   }
                 }}
-                options={{
-                  minimap: { enabled: true },
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                  wrappingIndent: 'deepIndent',
-                  automaticLayout: true,
-                  fontSize: 14,
-                  formatOnPaste: true
+                name="json-editor-dialog"
+                width="100%"
+                height="100%"
+                setOptions={{
+                  useWorker: false,
+                  showLineNumbers: true,
+                  tabSize: 2,
+                  showPrintMargin: false,
+                  enableBasicAutocompletion: true,
+                  enableLiveAutocompletion: true,
+                  fontSize: 14
                 }}
-                theme={isDarkMode ? 'vs-dark' : 'vs'}
-                onMount={customEditorDidMount}
+                editorProps={{ $blockScrolling: true }}
+                onLoad={editorDidMount}
               />
             </div>
             

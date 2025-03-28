@@ -1,4 +1,10 @@
-import * as monaco from 'monaco-editor';
+/**
+ * 自定义Position接口，与monaco-editor解耦
+ */
+export interface EditorPosition {
+  lineNumber: number;
+  column: number;
+}
 
 /**
  * 计算指定位置在JSON中的路径
@@ -11,7 +17,7 @@ import * as monaco from 'monaco-editor';
  */
 export const calculateJsonPathAtPosition = (
   json: any, 
-  position: monaco.Position, 
+  position: EditorPosition, 
   jsonText: string
 ): string => {
   if (!json || !jsonText) return '';

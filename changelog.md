@@ -1,5 +1,16 @@
 # Change Log
 
+## 2025年3月28日
+将Monaco编辑器替换为Ace编辑器，提升编辑器性能和可维护性。
+主要改进包括：
+1. 移除了monaco-editor和@monaco-editor/react依赖
+2. 添加了react-ace和ace-builds依赖
+3. 重构了JsonEditor组件，使用AceEditor替代Editor组件
+4. 更新了MappingConfigPage中的编辑器相关代码
+5. 重构了编辑器的位置接口，将monaco.Position替换为自定义的接口
+6. 更新了VSCode扩展的依赖，确保一致性
+7. 优化了编辑器的主题切换功能
+
 ## 2025年3月27日
 实现了全屏功能的抽象化改造！现在VisualModelGraph组件使用了useFullscreen自定义Hook来实现全屏功能，这使得代码更加简洁、可维护，也提高了复用性。
 主要改进包括：

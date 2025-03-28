@@ -10,6 +10,7 @@
 - 按数据领域组织的映射配置管理
 - 现代化、响应式的用户界面设计
 - FHIR Path 满足 FHIR 标准[FHIR Path](https://hl7.org/fhirpath/)
+- 高性能Ace编辑器支持JSON代码编辑
 
 ## 开发环境
 

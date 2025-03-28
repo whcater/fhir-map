@@ -30,6 +30,7 @@
    - [✓] 配置ESLint、Prettier等代码规范工具
    - [✓] 设计整体架构和数据流
    - [✓] 确定需要引入的npm包
+   - [✓] 将monaco-editor替换为ace-editor，优化性能和包体积
 
 ### 2. LogicDto元数据设计 [✓]
    - [✓] 设计LogicDto的数据结构
