@@ -26,3 +26,4 @@ package-lock.json
 
 .vscode/
 .vscode-test-web/
+*.vsix
