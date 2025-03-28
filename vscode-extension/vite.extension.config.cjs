@@ -9,7 +9,7 @@ const workingDir = process.cwd();
  * Vite配置 - VS Code插件Extension部分
  * 用于构建扩展的主要代码
  */
-module.exports = defineConfig(({ mode }: { mode: string }) => {
+module.exports = defineConfig(({ mode }) => {
   const isProd = mode === 'production';
   
   return {

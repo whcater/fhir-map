@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // 加载环境变量
   const env = loadEnv(mode, process.cwd(), '');
   // 强制使用开发模式
-  const isProd = false;
+  const isProd = mode === 'production';
 
   return {
     // 插件配置

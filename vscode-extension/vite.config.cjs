@@ -10,7 +10,7 @@ const workingDir = process.cwd();
 /**
  * Vite配置 - VS Code插件Webview部分
  */
-module.exports = defineConfig(({ mode }: { mode: string }) => {
+module.exports = defineConfig(({ mode }) => {
   // 始终使用开发模式来获取更多详细的错误信息
   const isProd = mode === 'production';
   
@@ -35,7 +35,7 @@ module.exports = defineConfig(({ mode }: { mode: string }) => {
         writeBundle: {
           sequential: true,
           order: 'post',
-          handler(options: { dir: string }) {
+          handler(options) {
             // 获取输出目录
             const outDir = options.dir || 'dist/webview';
             
@@ -85,7 +85,7 @@ module.exports = defineConfig(({ mode }: { mode: string }) => {
           // 入口文件名格式
           entryFileNames: '[name].js',
           // 资源文件名格式
-          assetFileNames: (assetInfo: { name: string }) => {
+          assetFileNames: (assetInfo) => {
             // 确保CSS文件保持原始名称
             if (assetInfo.name && assetInfo.name.endsWith('.css')) {
               return '[name][extname]';

@@ -39,14 +39,14 @@
     "test": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
     "pretest": "npm run compile-web",
     "vscode:prepublish": "npm run build:prod",
-    "build:webview": "vite build",
-    "build:extension": "vite build --config vite.extension.config.ts",
+    "build:webview": "vite build --config vite.config.cjs",
+    "build:extension": "vite build --config vite.extension.config.cjs",
     "build": "npm-run-all build:webview build:extension",
     "build:prod": "npm-run-all build:webview-prod build:extension-prod",
-    "build:webview-prod": "vite build --mode production",
-    "build:extension-prod": "vite build --config vite.extension.config.ts --mode production",
-    "dev:webview": "vite build --watch",
-    "dev:extension": "vite build --config vite.extension.config.ts --watch",
+    "build:webview-prod": "vite build --config vite.config.cjs --mode production",
+    "build:extension-prod": "vite build --config vite.extension.config.cjs --mode production",
+    "dev:webview": "vite build --config vite.config.cjs --watch",
+    "dev:extension": "vite build --config vite.extension.config.cjs --watch",
     "dev": "npm-run-all --parallel dev:webview dev:extension",
     "preview": "vite preview"
   },
@@ -85,6 +85,5 @@
     "xml2js": "^0.6.2",
     "zustand": "^5.0.3"
   },
-  "type": "module",
   "icon": "./resources/fhir-icon.png"
 }
